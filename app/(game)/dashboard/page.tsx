@@ -28,8 +28,9 @@ export default function DashboardPage() {
       }
     }
 
-    if (!user) loadSession();
-  }, [user, router, setUser, setCharacter]);
+    loadSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!user || !character) {
     return (
