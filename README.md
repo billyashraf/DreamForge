@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DreameForge
+
+A browser-based text MMORPG spanning three worlds: **Moon**, **Earth**, and **Mars**.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16 (App Router) |
+| Styling | Tailwind CSS v4 |
+| Database | MongoDB via Mongoose |
+| Auth | JWT + HTTP-only cookies |
+| Validation | Zod v4 |
+| State | Zustand |
+| Deployment | Vercel + MongoDB Atlas |
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone and install
+
+```bash
+git clone <your-repo>
+cd dreameforge
+npm install
+```
+
+### 2. Configure environment
+
+Copy `.env.local` and fill in your values:
+
+```env
+MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/dreameforge
+JWT_SECRET=<random-32+-char-string>
+```
+
+### 3. Seed the database
+
+Start the dev server, then POST to `/api/seed` to populate initial missions and items:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# In another terminal:
+curl -X POST http://localhost:3000/api/seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 4. Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev   # Development
+npm run build # Production build
+npm start     # Production server
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## World Overview
 
-## Learn More
+### Moon - Home Base
+- **Metapolis**: The iron-dome megacity. Training, trading, missions.
+- **Moon Junkyard**: Dangerous scrapyard outside the dome. Scavenging & expeditions.
 
-To learn more about Next.js, take a look at the following resources:
+### Earth - Exploration
+- Post-apocalyptic wasteland. Story missions, survivor rescues, resource runs.
+- Requires Level 5 + 200 credits travel cost.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Mars - PvP
+- Persistent open-world battle royale. Guild raids, territory control.
+- Requires Level 10 + 350 credits travel cost.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Core Gameplay Loop
 
-## Deploy on Vercel
+1. Register -> Login -> Create character
+2. Spawn in Metapolis
+3. Accept missions from the Mission Board
+4. Complete missions -> earn XP + Credits
+5. Level up -> unlock new locations
+6. Travel to Earth or Mars
+7. Join or create a Guild/Team
+8. Repeat
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Reference
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Create account |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| GET | `/api/auth/me` | Current session |
+
+### Game
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/character` | Get character |
+| POST | `/api/character` | Create character |
+| POST | `/api/travel` | Travel to location |
+| GET | `/api/missions` | List available missions |
+| POST | `/api/missions/accept` | Complete a mission |
+| GET | `/api/guilds` | List guilds |
+| POST | `/api/guilds` | Create guild |
+| POST | `/api/guilds/join` | Join guild |
+| GET | `/api/teams` | List teams |
+| POST | `/api/teams` | Create team |
+
+### Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/stats` | Dashboard stats |
+| GET/PATCH | `/api/admin/users` | Manage users |
+| GET/POST/PUT/DELETE | `/api/admin/missions` | Manage missions |
+
+## Roles
+
+| Role | Access |
+|------|--------|
+| player | Game features |
+| moderator | Admin panel (limited) |
+| admin | Full admin panel |
+
+## Deployment
+
+### Vercel
+1. Push to GitHub
+2. Import project on Vercel
+3. Add environment variables (`MONGODB_URI`, `JWT_SECRET`)
+4. Deploy
+
+### MongoDB Atlas
+1. Create a free cluster at mongodb.com/atlas
+2. Add your Vercel IP to the allowlist (or use 0.0.0.0/0)
+3. Copy the connection string to `MONGODB_URI`
+
+## Development Roadmap
+
+- [x] Phase 1 - Project Setup
+- [x] Phase 2 - Authentication
+- [x] Phase 3 - Core Gameplay (Metapolis, Travel, Characters)
+- [x] Phase 4 - Activities (Missions, Moon/Earth/Mars)
+- [x] Phase 5 - Social Systems (Guilds, Teams)
+- [x] Phase 6 - Admin Panel
+- [ ] Phase 7 - Polish, balancing, testing
+- [ ] Chat system
+- [ ] Inventory and marketplace
+- [ ] Mars Chess Battle Royale mechanics
+- [ ] Email verification
+
+## Branch Strategy
+
+```
+main            - production-ready
+develop         - integration branch
+feature/*       - individual features
+fix/*           - bug fixes
+```

@@ -1,65 +1,70 @@
-import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
+      <div className="max-w-2xl w-full space-y-8 text-center">
+        <div className="space-y-2">
+          <div className="text-xs font-mono text-gray-600 uppercase tracking-widest">
+            Text-Based MMORPG &middot; Moon &middot; Earth &middot; Mars
+          </div>
+          <h1 className="text-5xl font-mono font-bold tracking-tight">
+            <span className="text-cyan-400">DREAME</span>
+            <span className="text-gray-500">FORGE</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-500 font-mono text-sm mt-4 leading-relaxed">
+            Build your legend across three worlds.<br />
+            Survive the Moon Junkyard. Explore post-apocalyptic Earth.<br />
+            Dominate the Mars Battle Royale.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="border border-gray-800 p-6 text-left space-y-2 font-mono text-sm">
+          <div className="text-gray-600 text-xs uppercase tracking-widest mb-4">System Status</div>
+          <div className="flex justify-between text-gray-400">
+            <span>Server</span><span className="text-green-400">ONLINE</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>World</span><span className="text-cyan-400">Metapolis &middot; Active</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Mars Tournament</span><span className="text-yellow-400">Season 1</span>
+          </div>
         </div>
-      </main>
-    </div>
+
+        <div className="flex gap-4 justify-center">
+          <Link
+            href="/register"
+            className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-sm transition-colors border border-cyan-500"
+          >
+            CREATE ACCOUNT
+          </Link>
+          <Link
+            href="/login"
+            className="px-8 py-3 bg-gray-900 hover:bg-gray-800 text-gray-300 font-mono text-sm transition-colors border border-gray-700"
+          >
+            LOGIN
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 text-left">
+          {[
+            { world: "Moon", tag: "Home Base", desc: "Train, trade, and take missions in Metapolis." },
+            { world: "Earth", tag: "Exploration", desc: "Story missions in the apocalyptic wasteland." },
+            { world: "Mars", tag: "PvP & Guilds", desc: "Battle royale and guild territory wars." },
+          ].map((w) => (
+            <div key={w.world} className="border border-gray-800 p-3">
+              <div className="text-xs font-mono text-gray-600 uppercase">{w.tag}</div>
+              <div className="text-sm font-mono text-gray-200 mt-1">{w.world}</div>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">{w.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-gray-700 font-mono text-xs">
+          &copy; {new Date().getFullYear()} DreameForge. All rights reserved.
+        </p>
+      </div>
+    </main>
   );
 }

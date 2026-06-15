@@ -1,0 +1,22 @@
+﻿import { getSession } from "@/lib/auth";
+import { connectDB } from "@/lib/db";
+import { ok, unauthorized } from "@/lib/response";
+import User from "@/models/User";
+import Character from "@/models/Character";
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) return unauthorized();
+
+  await connectDB();
+
+  const user = await User.findById(session.userId).select("-passwordHash");
+  if (!user) return unauthorized();
+
+  const character = await Character.findOne({ userId: user._id });
+
+  return ok({
+    user: { id: user._id, username: user.username, email: user.email, role: user.role },
+    character,
+  });
+}
