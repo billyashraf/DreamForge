@@ -26,7 +26,7 @@ npm install
 
 ### 2. Configure environment
 
-Copy `.env.local` and fill in your values:
+Copy `.env.example` to `.env.local` and fill in your values:
 
 ```env
 MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/dreameforge

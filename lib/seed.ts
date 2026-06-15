@@ -1,6 +1,10 @@
+import bcrypt from "bcryptjs";
 import { connectDB } from "./db";
 import Mission from "@/models/Mission";
 import Item from "@/models/Item";
+import User from "@/models/User";
+import Character from "@/models/Character";
+import Guild from "@/models/Guild";
 
 const INITIAL_MISSIONS = [
   {
@@ -124,25 +128,129 @@ const INITIAL_ITEMS = [
   { name: "Tactical Scanner", type: "tool", rarity: "uncommon", description: "Reveals hidden loot in the junkyard.", stats: { intelligence: 5 }, price: 400 },
   { name: "Earth Steel Sword", type: "weapon", rarity: "rare", description: "Forged from pre-apocalypse Earth steel — extremely durable.", stats: { strength: 8 }, price: 800 },
   { name: "Void Armor Chestplate", type: "armor", rarity: "rare", description: "Lightweight alloy armor from Mars raiders.", stats: { agility: 4, healthBonus: 50 }, price: 1200 },
-  { name: "Neural Amplifier", type: "tool", rarity: "epic", description: "Boosts cognitive response for strategic combat.", stats: { intelligence: 10, strategy: 5 }, price: 3000 },
+  { name: "Neural Amplifier", type: "tool", rarity: "epic", description: "Boosts cognitive response for strategic combat.", stats: { intelligence: 10 }, price: 3000 },
   { name: "Legendary Dome Breaker", type: "weapon", rarity: "legendary", description: "A weapon so powerful it could crack the Moon's dome.", stats: { strength: 20, agility: 8 }, price: 10000 },
 ];
+
+export const DEMO_CREDENTIALS = {
+  player: { email: "demo@dreameforge.com", password: "DemoPlay3r!", username: "DemoPlayer" },
+  admin: { email: "admin@dreameforge.com", password: "AdminF0rge!", username: "GameAdmin" },
+};
 
 export async function seed() {
   await connectDB();
   console.log("Seeding database...");
 
+  // Missions
   const missionCount = await Mission.countDocuments();
   if (missionCount === 0) {
     await Mission.insertMany(INITIAL_MISSIONS);
     console.log(`Seeded ${INITIAL_MISSIONS.length} missions`);
   }
 
+  // Items
   const itemCount = await Item.countDocuments();
   if (itemCount === 0) {
     await Item.insertMany(INITIAL_ITEMS);
     console.log(`Seeded ${INITIAL_ITEMS.length} items`);
   }
 
+  // Demo guild (Iron Vanguard)
+  let demoGuild = await Guild.findOne({ name: "Iron Vanguard" });
+
+  // Demo player account
+  const { email: pEmail, password: pPass, username: pUser } = DEMO_CREDENTIALS.player;
+  let demoUser = await User.findOne({ email: pEmail });
+  if (!demoUser) {
+    const hash = await bcrypt.hash(pPass, 12);
+    demoUser = await User.create({
+      username: pUser,
+      email: pEmail,
+      passwordHash: hash,
+      role: "player",
+      isVerified: true,
+    });
+    console.log("Created demo player account");
+  }
+
+  let demoCharacter = await Character.findOne({ userId: demoUser._id });
+  if (!demoCharacter) {
+    demoCharacter = await Character.create({
+      userId: demoUser._id,
+      name: "Nova",
+      level: 8,
+      experience: 3200,
+      health: 180,
+      maxHealth: 180,
+      energy: 125,
+      maxEnergy: 125,
+      credits: 2750,
+      strength: 14,
+      intelligence: 11,
+      agility: 12,
+      skills: { combat: 4, scavenging: 5, survival: 3, strategy: 2, crafting: 2 },
+      currentLocation: "moon_junkyard",
+    });
+    console.log("Created demo player character: Nova");
+  }
+
+  // Demo guild — needs character ID for leader
+  if (!demoGuild) {
+    demoGuild = await Guild.create({
+      name: "Iron Vanguard",
+      tag: "IV",
+      leaderId: demoCharacter._id,
+      members: [demoCharacter._id],
+      description: "Elite scavengers and warriors. First to arrive, last to fall.",
+      level: 3,
+      credits: 4000,
+      marsRating: 850,
+    });
+    demoCharacter.guildId = demoGuild._id as never;
+    await demoCharacter.save();
+    console.log("Created demo guild: Iron Vanguard");
+  }
+
+  // Demo admin account
+  const { email: aEmail, password: aPass, username: aUser } = DEMO_CREDENTIALS.admin;
+  let adminUser = await User.findOne({ email: aEmail });
+  if (!adminUser) {
+    const hash = await bcrypt.hash(aPass, 12);
+    adminUser = await User.create({
+      username: aUser,
+      email: aEmail,
+      passwordHash: hash,
+      role: "admin",
+      isVerified: true,
+    });
+    console.log("Created demo admin account");
+  }
+
+  let adminCharacter = await Character.findOne({ userId: adminUser._id });
+  if (!adminCharacter) {
+    adminCharacter = await Character.create({
+      userId: adminUser._id,
+      name: "Overseer",
+      level: 20,
+      experience: 48000,
+      health: 300,
+      maxHealth: 300,
+      energy: 200,
+      maxEnergy: 200,
+      credits: 25000,
+      strength: 22,
+      intelligence: 28,
+      agility: 20,
+      skills: { combat: 10, scavenging: 8, survival: 9, strategy: 12, crafting: 7 },
+      currentLocation: "mars",
+      guildId: demoGuild._id as never,
+    });
+    console.log("Created demo admin character: Overseer");
+  }
+
   console.log("Seed complete.");
+  return {
+    demoCreds: DEMO_CREDENTIALS,
+    guild: { name: demoGuild?.name, tag: demoGuild?.tag },
+  };
 }
