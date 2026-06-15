@@ -45,7 +45,7 @@ export default function Home() {
             Text-Based MMORPG &middot; Moon &middot; Earth &middot; Mars
           </div>
           <h1 className="text-5xl font-mono font-bold tracking-tight">
-            <span className="text-cyan-400">DREAME</span>
+            <span className="text-cyan-400">DREAM</span>
             <span className="text-gray-500">FORGE</span>
           </h1>
           <p className="text-gray-500 font-mono text-sm leading-relaxed pt-1">
@@ -75,7 +75,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="text-xs font-mono text-gray-600 space-y-0.5">
-                <div>Email: <span className="text-gray-400">demo@dreameforge.com</span></div>
+                <div>Email: <span className="text-gray-400">demo@dreamforge.com</span></div>
                 <div>Pass: <span className="text-gray-400">DemoPlay3r!</span></div>
               </div>
               <button
@@ -100,7 +100,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="text-xs font-mono text-gray-600 space-y-0.5">
-                <div>Email: <span className="text-gray-400">admin@dreameforge.com</span></div>
+                <div>Email: <span className="text-gray-400">admin@dreamforge.com</span></div>
                 <div>Pass: <span className="text-gray-400">AdminF0rge!</span></div>
               </div>
               <button
@@ -166,9 +166,9 @@ export default function Home() {
         </div>
 
         <div className="flex items-center justify-between text-xs font-mono text-gray-700">
-          <span>&copy; {new Date().getFullYear()} DreameForge</span>
+          <span>&copy; {new Date().getFullYear()} DreamForge</span>
           <a
-            href="https://github.com/billyashraf/DreameForge"
+            href="https://github.com/billyashraf/DreamForge"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-gray-500 transition-colors"

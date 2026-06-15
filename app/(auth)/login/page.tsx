@@ -60,8 +60,8 @@ export default function LoginPage() {
   }
 
   function fillDemo(type: "player" | "admin") {
-    if (type === "player") setForm({ email: "demo@dreameforge.com", password: "DemoPlay3r!" });
-    else setForm({ email: "admin@dreameforge.com", password: "AdminF0rge!" });
+    if (type === "player") setForm({ email: "demo@dreamforge.com", password: "DemoPlay3r!" });
+    else setForm({ email: "admin@dreamforge.com", password: "AdminF0rge!" });
   }
 
   return (
@@ -69,7 +69,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-4">
         <div className="text-center">
           <Link href="/" className="font-mono font-bold text-2xl">
-            <span className="text-cyan-400">DREAME</span>
+            <span className="text-cyan-400">DREAM</span>
             <span className="text-gray-500">FORGE</span>
           </Link>
           <p className="text-xs font-mono text-gray-600 mt-1 uppercase tracking-widest">Access Terminal</p>
@@ -98,10 +98,10 @@ export default function LoginPage() {
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs font-mono text-gray-700">
             <button onClick={() => fillDemo("player")} className="text-left hover:text-gray-500 transition-colors truncate">
-              fill: demo@dreameforge.com
+              fill: demo@dreamforge.com
             </button>
             <button onClick={() => fillDemo("admin")} className="text-left hover:text-gray-500 transition-colors truncate">
-              fill: admin@dreameforge.com
+              fill: admin@dreamforge.com
             </button>
           </div>
         </div>

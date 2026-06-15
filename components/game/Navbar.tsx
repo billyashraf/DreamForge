@@ -22,7 +22,7 @@ export function Navbar() {
     <nav className="bg-gray-950 border-b border-gray-800 px-4 py-2 flex items-center justify-between">
       <div className="flex items-center gap-6">
         <Link href="/dashboard" className="font-mono font-bold text-cyan-400 text-lg tracking-tight">
-          DREAME<span className="text-gray-500">FORGE</span>
+          DREAM<span className="text-gray-500">FORGE</span>
         </Link>
         <div className="hidden md:flex items-center gap-4 text-xs font-mono text-gray-500">
           <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>

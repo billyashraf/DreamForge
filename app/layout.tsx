@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DreameForge — Text MMORPG",
+  title: "DreamForge — Text MMORPG",
   description: "A browser-based text MMORPG across the Moon, Earth, and Mars.",
 };
 

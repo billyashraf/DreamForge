@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
-const COOKIE_NAME = "dreameforge_token";
+const COOKIE_NAME = "dreamforge_token";
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is not set");

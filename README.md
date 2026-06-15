@@ -1,4 +1,4 @@
-# DreameForge
+# DreamForge
 
 A browser-based text MMORPG spanning three worlds: **Moon**, **Earth**, and **Mars**.
 
@@ -20,7 +20,7 @@ A browser-based text MMORPG spanning three worlds: **Moon**, **Earth**, and **Ma
 
 ```bash
 git clone <your-repo>
-cd dreameforge
+cd dreamforge
 npm install
 ```
 
@@ -29,7 +29,7 @@ npm install
 Copy `.env.example` to `.env.local` and fill in your values:
 
 ```env
-MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/dreameforge
+MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/dreamforge
 JWT_SECRET=<random-32+-char-string>
 ```
 

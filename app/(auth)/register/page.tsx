@@ -54,7 +54,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Link href="/" className="font-mono font-bold text-2xl">
-            <span className="text-cyan-400">DREAME</span>
+            <span className="text-cyan-400">DREAM</span>
             <span className="text-gray-500">FORGE</span>
           </Link>
           <p className="text-xs font-mono text-gray-600 mt-2 uppercase tracking-widest">

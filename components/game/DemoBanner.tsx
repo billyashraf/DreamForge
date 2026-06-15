@@ -2,13 +2,13 @@
 
 import { useGameStore } from "@/store/useGameStore";
 
-const DEMO_EMAILS = ["demo@dreameforge.com", "admin@dreameforge.com"];
+const DEMO_EMAILS = ["demo@dreamforge.com", "admin@dreamforge.com"];
 
 export function DemoBanner() {
   const user = useGameStore((s) => s.user);
   if (!user || !DEMO_EMAILS.includes(user.email)) return null;
 
-  const isAdmin = user.email === "admin@dreameforge.com";
+  const isAdmin = user.email === "admin@dreamforge.com";
 
   return (
     <div className={`text-xs font-mono px-4 py-1.5 text-center border-b ${

@@ -133,8 +133,8 @@ const INITIAL_ITEMS = [
 ];
 
 export const DEMO_CREDENTIALS = {
-  player: { email: "demo@dreameforge.com", password: "DemoPlay3r!", username: "DemoPlayer" },
-  admin: { email: "admin@dreameforge.com", password: "AdminF0rge!", username: "GameAdmin" },
+  player: { email: "demo@dreamforge.com", password: "DemoPlay3r!", username: "DemoPlayer" },
+  admin: { email: "admin@dreamforge.com", password: "AdminF0rge!", username: "GameAdmin" },
 };
 
 export async function seed() {

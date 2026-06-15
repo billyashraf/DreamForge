@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to DreameForge are documented here.
+All notable changes to DreamForge are documented here.
 
 ## [0.1.0] - 2026-06-15
 
