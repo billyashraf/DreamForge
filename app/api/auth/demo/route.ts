@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
   const type = body?.type === "admin" ? "admin" : "player";
   const creds = DEMO_CREDENTIALS[type];
 
-  await connectDB();
+  try {
+    await connectDB();
+  } catch {
+    return err("Database unavailable. Check your MONGODB_URI configuration.", 503);
+  }
 
   let user = await User.findOne({ email: creds.email });
   if (!user) {

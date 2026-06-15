@@ -20,16 +20,16 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setDemoError(data.error ?? "Demo unavailable. Try again shortly.");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setDemoError(data?.error ?? `Server error (${res.status}). Check MONGODB_URI in .env.local.`);
         return;
       }
       setUser(data.data.user);
       setCharacter(data.data.character);
       router.push(type === "admin" ? "/admin" : "/dashboard");
     } catch {
-      setDemoError("Connection error. Is the server running?");
+      setDemoError("Cannot reach the server. Make sure `npm run dev` is running.");
     } finally {
       setDemoLoading(null);
     }
