@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
+export interface ICurseNode {
+  skillId: string;
+  level: number;
+}
+
 export interface ICharacter extends Document {
   userId: Types.ObjectId;
   name: string;
@@ -27,6 +32,8 @@ export interface ICharacter extends Document {
   activeMissions: Types.ObjectId[];
   completedMissions: Types.ObjectId[];
   lastEnergyRegen?: Date;
+  merits: number;
+  curseTree: ICurseNode[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +66,13 @@ const CharacterSchema = new Schema<ICharacter>(
     activeMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     completedMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     lastEnergyRegen: { type: Date },
+    merits: { type: Number, default: 1000 },
+    curseTree: [
+      {
+        skillId: { type: String, required: true },
+        level: { type: Number, default: 1, min: 1 },
+      },
+    ],
   },
   { timestamps: true }
 );
