@@ -153,6 +153,36 @@ npm start     # Production server
 2. Add your Vercel IP to the allowlist (or use 0.0.0.0/0)
 3. Copy the connection string to `MONGODB_URI`
 
+## Open System Plan
+
+DreamForge is built entirely in the open. Every commit, fix, and feature is public and streamed live inside the game via the **Commit Log** panel.
+
+### Philosophy
+- No hidden roadmap — the git log **is** the roadmap
+- Players can see exactly what changed, when, and why
+- Conventional commits (`feat:`, `fix:`, `refactor:`) are parsed and color-coded in the UI
+
+### In-Game Commit Log (`/commit-log`)
+The Commit Log page is a first-class game screen accessible from the main navbar. It:
+- Fetches the last 40 commits from the GitHub API in real time
+- Color-codes commits by type (feat = cyan, fix = red, refactor = yellow, chore = gray, docs = blue)
+- Shows SHA, author, relative timestamp ("2h ago"), and a direct link to each commit on GitHub
+- Supports filtering by commit type
+- Click any commit to expand its full body message
+- Auto-cached for 60 seconds server-side to stay within GitHub's rate limits
+
+### GitHub Rate Limits
+The public GitHub API allows 60 unauthenticated requests/hour. To increase this:
+```env
+# .env.local
+GITHUB_TOKEN=ghp_your_personal_access_token
+```
+Generate a token at **github.com → Settings → Developer settings → Personal access tokens** (no scopes needed for public repos).
+
+### Repo
+- Source: [github.com/billyashraf/DreamForge](https://github.com/billyashraf/DreamForge)
+- All commits follow [Conventional Commits](https://www.conventionalcommits.org/) format
+
 ## Development Roadmap
 
 - [x] Phase 1 - Project Setup

@@ -28,6 +28,7 @@ export function Navbar() {
           <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>
           <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
           <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
+          <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">Commit Log</Link>
           {user?.role !== "player" && (
             <Link href="/admin" className="text-red-500 hover:text-red-400 transition-colors">Admin</Link>
           )}
