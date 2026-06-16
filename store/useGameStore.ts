@@ -23,6 +23,7 @@ interface CharacterState {
   currentLocation: string;
   guildId?: string | null;
   teamId?: string | null;
+  lastEnergyRegen?: string | null;
 }
 
 interface UserState {

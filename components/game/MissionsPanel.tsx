@@ -14,6 +14,7 @@ interface Mission {
   rewards: { experience: number; credits: number };
   requirements: { level?: number };
   durationMinutes: number;
+  energyCost: number;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -31,6 +32,7 @@ export function MissionsPanel() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [currentEnergy, setCurrentEnergy] = useState(character?.energy ?? 0);
 
   const fetchMissions = useCallback(async () => {
     setLoading(true);
@@ -39,17 +41,27 @@ export function MissionsPanel() {
       if (res.ok) {
         const data = await res.json();
         setMissions(data.data.missions);
+        // Sync energy from server response (includes regen applied server-side)
+        if (data.data.energy !== undefined) {
+          setCurrentEnergy(data.data.energy);
+          updateCharacter({ energy: data.data.energy, lastEnergyRegen: data.data.lastEnergyRegen });
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateCharacter]);
 
   useEffect(() => {
     if (character) fetchMissions();
   }, [character?.currentLocation, fetchMissions, character]);
 
-  async function acceptMission(missionId: string, title: string) {
+  // Keep local energy in sync with store
+  useEffect(() => {
+    setCurrentEnergy(character?.energy ?? 0);
+  }, [character?.energy]);
+
+  async function acceptMission(missionId: string, title: string, energyCost: number) {
     setAccepting(missionId);
     try {
       const res = await fetch("/api/missions/accept", {
@@ -67,16 +79,16 @@ export function MissionsPanel() {
       const d = data.data;
       addLog(d.narrative, "narrative");
       addLog(
-        `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢`,
+        `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢, -${energyCost} EN`,
         "success"
       );
 
-      if (d.leveledUp) {
+      if (d.levelsGained > 0) {
         addLog(`LEVEL UP! You are now level ${d.newLevel}!`, "success");
       }
 
       updateCharacter(d.character);
-      await fetchMissions();
+      setCurrentEnergy(d.character.energy);
     } catch {
       addLog("Mission failed. Connection error.", "error");
     } finally {
@@ -87,47 +99,53 @@ export function MissionsPanel() {
   if (!character) return null;
 
   return (
-    <Card title={`Missions — ${character.currentLocation.replace("_", " ")}`} accent="green">
+    <Card title={`Missions — ${character.currentLocation.replace(/_/g, " ")}`} accent="green">
       {loading ? (
         <p className="text-xs font-mono text-gray-600">Loading missions...</p>
       ) : missions.length === 0 ? (
         <p className="text-xs font-mono text-gray-600">
-          No missions available here. Try a different location or increase your level.
+          No missions available here. Travel to another location or increase your level.
         </p>
       ) : (
         <div className="space-y-3">
-          {missions.map((m) => (
-            <div key={m._id} className="border border-gray-800 p-3 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-mono text-gray-200">{m.title}</span>
-                    <span className={`text-xs font-mono uppercase ${DIFFICULTY_COLORS[m.difficulty]}`}>
-                      {m.difficulty}
-                    </span>
-                    <span className="text-xs font-mono text-gray-600 uppercase">{m.type}</span>
+          {missions.map((m) => {
+            const canAfford = currentEnergy >= m.energyCost;
+            return (
+              <div key={m._id} className="border border-gray-800 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-mono text-gray-200">{m.title}</span>
+                      <span className={`text-xs font-mono uppercase ${DIFFICULTY_COLORS[m.difficulty]}`}>
+                        {m.difficulty}
+                      </span>
+                      <span className="text-xs font-mono text-gray-600 uppercase">{m.type}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{m.description}</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">{m.description}</p>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-gray-800">
+                  <div className="flex gap-3 text-xs font-mono text-gray-500">
+                    <span className="text-yellow-500">+{m.rewards.experience} XP</span>
+                    <span className="text-cyan-500">+{m.rewards.credits}¢</span>
+                    <span className={canAfford ? "text-green-700" : "text-red-700"}>
+                      -{m.energyCost} EN
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="success"
+                    loading={accepting === m._id}
+                    disabled={!!accepting || !canAfford}
+                    onClick={() => acceptMission(m._id, m.title, m.energyCost)}
+                    title={!canAfford ? `Need ${m.energyCost} EN` : undefined}
+                  >
+                    {canAfford ? "Accept" : "Low EN"}
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-1 border-t border-gray-800">
-                <div className="flex gap-3 text-xs font-mono text-gray-500">
-                  <span className="text-yellow-500">+{m.rewards.experience} XP</span>
-                  <span className="text-cyan-500">+{m.rewards.credits}¢</span>
-                  <span className="text-gray-600">{m.durationMinutes}min</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="success"
-                  loading={accepting === m._id}
-                  disabled={!!accepting}
-                  onClick={() => acceptMission(m._id, m.title)}
-                >
-                  Accept
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </Card>

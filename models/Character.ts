@@ -26,6 +26,7 @@ export interface ICharacter extends Document {
   teamId?: Types.ObjectId;
   activeMissions: Types.ObjectId[];
   completedMissions: Types.ObjectId[];
+  lastEnergyRegen?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +58,7 @@ const CharacterSchema = new Schema<ICharacter>(
     teamId: { type: Schema.Types.ObjectId, ref: "Team" },
     activeMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     completedMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
+    lastEnergyRegen: { type: Date },
   },
   { timestamps: true }
 );

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
   const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId"
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen"
   );
 
   const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
