@@ -41,7 +41,6 @@ export function MissionsPanel() {
       if (res.ok) {
         const data = await res.json();
         setMissions(data.data.missions);
-        // Sync energy from server response (includes regen applied server-side)
         if (data.data.energy !== undefined) {
           setCurrentEnergy(data.data.energy);
           updateCharacter({ energy: data.data.energy, lastEnergyRegen: data.data.lastEnergyRegen });
@@ -50,16 +49,16 @@ export function MissionsPanel() {
     } finally {
       setLoading(false);
     }
-  }, [updateCharacter]);
+  // updateCharacter is stable (Zustand action) — safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Only re-fetch when location changes, not on every character update.
+  // Including `character` in deps would loop: fetchMissions → updateCharacter → character changes → re-fetch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (character) fetchMissions();
-  }, [character?.currentLocation, fetchMissions, character]);
-
-  // Keep local energy in sync with store
-  useEffect(() => {
-    setCurrentEnergy(character?.energy ?? 0);
-  }, [character?.energy]);
+  }, [character?.currentLocation]);
 
   async function acceptMission(missionId: string, title: string, energyCost: number) {
     setAccepting(missionId);
