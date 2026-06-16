@@ -7,14 +7,14 @@ import Character from "@/models/Character";
 
 async function requireAdmin() {
   const session = await getSession();
-  if (!session) return null;
-  if (session.role !== "admin" && session.role !== "moderator") return null;
-  return session;
+  if (!session) return { session: null, error: unauthorized() };
+  if (session.role !== "admin" && session.role !== "moderator") return { session: null, error: forbidden() };
+  return { session, error: null };
 }
 
 export async function GET(req: NextRequest) {
-  const session = await requireAdmin();
-  if (!session) return unauthorized();
+  const { session, error } = await requireAdmin();
+  if (!session) return error;
 
   await connectDB();
 
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await requireAdmin();
-  if (!session) return unauthorized();
+  const { session, error } = await requireAdmin();
+  if (!session) return error;
 
   const body = await req.json().catch(() => null);
   if (!body?.userId) return err("userId is required");

@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
 
   await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-  const character = await Character.findOne({ userId: user._id }).select("name level currentLocation");
+  const character = await Character.findOne({ userId: user._id }).select(
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId"
+  );
 
   const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
   const cookie = createSessionCookie(token);
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
     user: { id: user._id, username: user.username, email: user.email, role: user.role },
     hasCharacter: !!character,
     character: character
-      ? { name: character.name, level: character.level, location: character.currentLocation }
+      ? { id: character._id.toString(), ...character.toObject() }
       : null,
   });
   response.headers.set("Set-Cookie", cookie);

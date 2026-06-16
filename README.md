@@ -14,6 +14,29 @@ A browser-based text MMORPG spanning three worlds: **Moon**, **Earth**, and **Ma
 | State | Zustand |
 | Deployment | Vercel + MongoDB Atlas |
 
+## Test Accounts
+
+These accounts are created automatically when you hit `/api/seed`. All passwords meet the registration requirements.
+
+### Demo Accounts (Quick Access from Login Page)
+
+| Username | Email | Password | Role | Character | Level | Location |
+|----------|-------|----------|------|-----------|-------|----------|
+| DemoPlayer | demo@dreamforge.com | DemoPlay3r! | player | Nova | 8 | Moon Junkyard |
+| GameAdmin | admin@dreamforge.com | AdminF0rge! | admin | Overseer | 20 | Mars |
+
+### Test Accounts
+
+| Username | Email | Password | Role | Character | Level | Location |
+|----------|-------|----------|------|-----------|-------|----------|
+| Rookie_Rex | rookie@dreamforge.com | TestR00kie! | player | Rex | 3 | Metapolis |
+| Scout_Lyra | scout@dreamforge.com | TestSc0ut! | player | Lyra | 6 | Moon Junkyard |
+| Ranger_Kade | ranger@dreamforge.com | TestR4nger! | player | Kade | 8 | Earth |
+| Veteran_Zara | veteran@dreamforge.com | TestVet3ran! | player | Zara | 14 | Mars |
+| Mod_Cassius | mod@dreamforge.com | TestM0d123! | moderator | Cassius | 20 | Metapolis |
+
+> All test accounts are seeded idempotently — running `/api/seed` multiple times is safe.
+
 ## Getting Started
 
 ### 1. Clone and install
@@ -30,6 +53,8 @@ Copy `.env.example` to `.env.local` and fill in your values:
 
 ```env
 MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/dreamforge
+# Or use the standard connection string if your network blocks SRV lookups:
+# MONGODB_URI=mongodb://<user>:<pass>@<shard-00>.mongodb.net:27017,.../?ssl=true&replicaSet=...&authSource=admin
 JWT_SECRET=<random-32+-char-string>
 ```
 

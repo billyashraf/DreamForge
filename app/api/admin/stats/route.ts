@@ -1,6 +1,6 @@
 ﻿import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { ok, unauthorized } from "@/lib/response";
+import { ok, unauthorized, forbidden } from "@/lib/response";
 import User from "@/models/User";
 import Character from "@/models/Character";
 import Mission from "@/models/Mission";
@@ -10,7 +10,7 @@ import Team from "@/models/Team";
 export async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
-  if (session.role !== "admin" && session.role !== "moderator") return unauthorized();
+  if (session.role !== "admin" && session.role !== "moderator") return forbidden();
 
   await connectDB();
 

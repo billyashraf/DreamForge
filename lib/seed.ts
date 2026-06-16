@@ -137,6 +137,114 @@ export const DEMO_CREDENTIALS = {
   admin: { email: "admin@dreamforge.com", password: "AdminF0rge!", username: "GameAdmin" },
 };
 
+export const TEST_ACCOUNTS = [
+  {
+    username: "Rookie_Rex",
+    email: "rookie@dreamforge.com",
+    password: "TestR00kie!",
+    role: "player" as const,
+    character: {
+      name: "Rex",
+      level: 3,
+      experience: 220,
+      health: 120,
+      maxHealth: 120,
+      energy: 105,
+      maxEnergy: 105,
+      credits: 650,
+      strength: 7,
+      intelligence: 6,
+      agility: 6,
+      skills: { combat: 2, scavenging: 1, survival: 1, strategy: 1, crafting: 1 },
+      currentLocation: "metapolis",
+    },
+  },
+  {
+    username: "Scout_Lyra",
+    email: "scout@dreamforge.com",
+    password: "TestSc0ut!",
+    role: "player" as const,
+    character: {
+      name: "Lyra",
+      level: 6,
+      experience: 1400,
+      health: 155,
+      maxHealth: 155,
+      energy: 115,
+      maxEnergy: 115,
+      credits: 1800,
+      strength: 10,
+      intelligence: 9,
+      agility: 11,
+      skills: { combat: 3, scavenging: 4, survival: 2, strategy: 2, crafting: 1 },
+      currentLocation: "moon_junkyard",
+    },
+  },
+  {
+    username: "Ranger_Kade",
+    email: "ranger@dreamforge.com",
+    password: "TestR4nger!",
+    role: "player" as const,
+    character: {
+      name: "Kade",
+      level: 8,
+      experience: 3500,
+      health: 175,
+      maxHealth: 175,
+      energy: 125,
+      maxEnergy: 125,
+      credits: 3200,
+      strength: 13,
+      intelligence: 10,
+      agility: 14,
+      skills: { combat: 4, scavenging: 3, survival: 5, strategy: 3, crafting: 2 },
+      currentLocation: "earth",
+    },
+  },
+  {
+    username: "Veteran_Zara",
+    email: "veteran@dreamforge.com",
+    password: "TestVet3ran!",
+    role: "player" as const,
+    character: {
+      name: "Zara",
+      level: 14,
+      experience: 18000,
+      health: 240,
+      maxHealth: 240,
+      energy: 165,
+      maxEnergy: 165,
+      credits: 9500,
+      strength: 18,
+      intelligence: 16,
+      agility: 17,
+      skills: { combat: 7, scavenging: 6, survival: 8, strategy: 6, crafting: 4 },
+      currentLocation: "mars",
+    },
+  },
+  {
+    username: "Mod_Cassius",
+    email: "mod@dreamforge.com",
+    password: "TestM0d123!",
+    role: "moderator" as const,
+    character: {
+      name: "Cassius",
+      level: 20,
+      experience: 48000,
+      health: 300,
+      maxHealth: 300,
+      energy: 200,
+      maxEnergy: 200,
+      credits: 20000,
+      strength: 20,
+      intelligence: 25,
+      agility: 18,
+      skills: { combat: 9, scavenging: 7, survival: 8, strategy: 11, crafting: 6 },
+      currentLocation: "metapolis",
+    },
+  },
+];
+
 export async function seed() {
   await connectDB();
   console.log("Seeding database...");
@@ -251,9 +359,31 @@ export async function seed() {
     console.log("Created demo admin character: Overseer");
   }
 
+  // Test accounts
+  for (const account of TEST_ACCOUNTS) {
+    let testUser = await User.findOne({ email: account.email });
+    if (!testUser) {
+      const hash = await bcrypt.hash(account.password, 12);
+      testUser = await User.create({
+        username: account.username,
+        email: account.email,
+        passwordHash: hash,
+        role: account.role,
+        isVerified: true,
+      });
+      console.log(`Created test account: ${account.username}`);
+    }
+    const testChar = await Character.findOne({ userId: testUser._id });
+    if (!testChar) {
+      await Character.create({ userId: testUser._id, ...account.character });
+      console.log(`Created test character: ${account.character.name}`);
+    }
+  }
+
   console.log("Seed complete.");
   return {
     demoCreds: DEMO_CREDENTIALS,
+    testAccounts: TEST_ACCOUNTS.map((a) => ({ username: a.username, email: a.email, password: a.password, role: a.role })),
     guild: { name: demoGuild?.name, tag: demoGuild?.tag },
   };
 }
