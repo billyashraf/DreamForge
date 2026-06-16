@@ -24,6 +24,11 @@ export async function connectDB() {
     cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null; // allow retry on next request
+    throw e;
+  }
   return cached.conn;
 }

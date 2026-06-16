@@ -206,9 +206,12 @@ export async function seed() {
       credits: 4000,
       marsRating: 850,
     });
+    console.log("Created demo guild: Iron Vanguard");
+  }
+  // Always ensure the character is linked to the guild (handles re-seed edge cases)
+  if (!demoCharacter.guildId || demoCharacter.guildId.toString() !== demoGuild._id.toString()) {
     demoCharacter.guildId = demoGuild._id as never;
     await demoCharacter.save();
-    console.log("Created demo guild: Iron Vanguard");
   }
 
   // Demo admin account

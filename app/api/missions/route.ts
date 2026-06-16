@@ -18,6 +18,7 @@ export async function GET() {
     isActive: true,
     location: character.currentLocation,
     "requirements.level": { $lte: character.level },
+    _id: { $nin: character.completedMissions },
   } as Record<string, unknown>).sort({ difficulty: 1 });
 
   return ok({ missions, location: character.currentLocation });

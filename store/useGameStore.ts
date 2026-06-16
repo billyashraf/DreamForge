@@ -13,6 +13,13 @@ interface CharacterState {
   strength: number;
   intelligence: number;
   agility: number;
+  skills: {
+    combat: number;
+    scavenging: number;
+    survival: number;
+    strategy: number;
+    crafting: number;
+  };
   currentLocation: string;
   guildId?: string | null;
   teamId?: string | null;

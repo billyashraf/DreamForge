@@ -19,8 +19,10 @@ export async function POST(req: NextRequest) {
 
   try {
     await connectDB();
-  } catch {
-    return err("Database unavailable. Check your MONGODB_URI configuration.", 503);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[demo] connectDB failed:", msg);
+    return err(`Database unavailable: ${msg}`, 503);
   }
 
   let user = await User.findOne({ email: creds.email });
@@ -34,7 +36,9 @@ export async function POST(req: NextRequest) {
 
   await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-  const character = await Character.findOne({ userId: user._id });
+  const character = await Character.findOne({ userId: user._id }).select(
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId"
+  );
 
   const token = signToken({
     userId: user._id.toString(),
@@ -47,8 +51,9 @@ export async function POST(req: NextRequest) {
     message: `Logged in as demo ${type}`,
     user: { id: user._id, username: user.username, email: user.email, role: user.role },
     hasCharacter: !!character,
-    character: character ?? null,
-    isDemo: true,
+    character: character
+      ? { id: character._id.toString(), ...character.toObject() }
+      : null,
   });
   response.headers.set("Set-Cookie", cookie);
   return response;
