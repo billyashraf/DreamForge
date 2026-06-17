@@ -5,6 +5,12 @@ export interface ICurseNode {
   level: number;
 }
 
+export interface ICurseLink {
+  from: string;
+  to: string;
+  weight: number;
+}
+
 export interface ICharacter extends Document {
   userId: Types.ObjectId;
   name: string;
@@ -34,6 +40,7 @@ export interface ICharacter extends Document {
   lastEnergyRegen?: Date;
   merits: number;
   curseTree: ICurseNode[];
+  curseLinks: ICurseLink[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +78,13 @@ const CharacterSchema = new Schema<ICharacter>(
       {
         skillId: { type: String, required: true },
         level: { type: Number, default: 1, min: 1 },
+      },
+    ],
+    curseLinks: [
+      {
+        from: { type: String, required: true },
+        to: { type: String, required: true },
+        weight: { type: Number, default: 1, min: 1 },
       },
     ],
   },
