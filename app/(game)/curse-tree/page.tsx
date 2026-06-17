@@ -277,13 +277,13 @@ export default function CurseTreePage() {
 
         const isSel     = selP === p.id;
         const isLinking = linkingFrom === p.id;
-        const r = p.activated ? 5 + (p.level - 1) * 1.5 : isSel ? 5 : 3;
+        const r = p.activated ? 5 + (p.level - 1) * 0.18 : isSel ? 5 : 3; // level 55 → ~14.7px
 
         const statGlow = p.activated ? STAT_GLOW[SKILL_STATS[p.id]] : null;
 
         ctx.save();
         if (p.activated || isSel || isLinking) {
-          ctx.shadowBlur  = isLinking ? 26 : isSel ? 20 : 10 + (p.level - 1) * 4;
+          ctx.shadowBlur  = isLinking ? 26 : isSel ? 20 : 10 + (p.level - 1) * 0.22; // level 55 → ~22px
           ctx.shadowColor = isLinking ? "#ffaa00" : p.activated ? (statGlow ?? levelColor(p.level)) : isSel ? "#00ffff" : levelColor(p.level);
         }
         if (isLinking) {
