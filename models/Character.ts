@@ -38,6 +38,10 @@ export interface ICharacter extends Document {
   activeMissions: Types.ObjectId[];
   completedMissions: Types.ObjectId[];
   lastEnergyRegen?: Date;
+  pain: number;
+  maxPain: number;
+  madness: number;
+  lastPainUpdate?: Date;
   merits: number;
   curseTree: ICurseNode[];
   curseLinks: ICurseLink[];
@@ -73,6 +77,10 @@ const CharacterSchema = new Schema<ICharacter>(
     activeMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     completedMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     lastEnergyRegen: { type: Date },
+    pain:          { type: Number, default: 0 },
+    maxPain:       { type: Number, default: 100 },
+    madness:       { type: Number, default: 0 },
+    lastPainUpdate: { type: Date },
     merits: { type: Number, default: 1000 },
     curseTree: [
       {

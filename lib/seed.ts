@@ -433,7 +433,7 @@ export async function seed() {
   await Mission.bulkWrite(
     INITIAL_MISSIONS.map((m) => ({
       updateOne: {
-        filter: { title: m.title, location: m.location },
+        filter: { title: m.title, location: m.location as any },
         update: { $set: m as any },
         upsert: true,
       },

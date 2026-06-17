@@ -76,14 +76,21 @@ export function MissionsPanel() {
       }
 
       const d = data.data;
-      addLog(d.narrative, "narrative");
-      addLog(
-        `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢${d.rewards.merits ? `, +${d.rewards.merits} merits` : ""}, -${energyCost} EN`,
-        "success"
-      );
+      addLog(d.narrative, d.failed ? "error" : "narrative");
 
-      if (d.levelsGained > 0) {
-        addLog(`LEVEL UP! You are now level ${d.newLevel}!`, "success");
+      if (d.failed) {
+        addLog(
+          `Mission failed: ${title} — +${d.painGained} pain${d.madnessGained > 0 ? `, +${d.madnessGained} MADNESS` : ""}, -${energyCost} EN`,
+          "error"
+        );
+      } else {
+        addLog(
+          `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢${d.rewards.merits ? `, +${d.rewards.merits} merits` : ""}, -${energyCost} EN`,
+          "success"
+        );
+        if (d.levelsGained > 0) {
+          addLog(`LEVEL UP! You are now level ${d.newLevel}!`, "success");
+        }
       }
 
       updateCharacter(d.character);

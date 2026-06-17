@@ -2,14 +2,16 @@ interface StatBarProps {
   label: string;
   value: number;
   max: number;
-  color?: "cyan" | "red" | "green" | "yellow";
+  color?: "cyan" | "red" | "green" | "yellow" | "orange" | "purple";
 }
 
 const colors = {
-  cyan: "bg-cyan-500",
-  red: "bg-red-500",
-  green: "bg-green-500",
+  cyan:   "bg-cyan-500",
+  red:    "bg-red-500",
+  green:  "bg-green-500",
   yellow: "bg-yellow-500",
+  orange: "bg-orange-500",
+  purple: "bg-purple-500",
 };
 
 export function StatBar({ label, value, max, color = "cyan" }: StatBarProps) {

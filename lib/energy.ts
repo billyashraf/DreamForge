@@ -21,3 +21,14 @@ export async function applyEnergyRegen(character: ICharacter): Promise<void> {
   character.lastEnergyRegen = now;
   await character.save();
 }
+
+// Pain recedes to 0 over 45 minutes — called before any pain calculation
+export function applyPainRegen(character: ICharacter): void {
+  const now = new Date();
+  const last = character.lastPainUpdate ?? now;
+  const minutesElapsed = (now.getTime() - last.getTime()) / 60000;
+  const maxPain = character.maxPain ?? 100;
+  const reduction = minutesElapsed * (maxPain / 45);
+  character.pain = Math.max(0, (character.pain ?? 0) - reduction);
+  character.lastPainUpdate = now;
+}
