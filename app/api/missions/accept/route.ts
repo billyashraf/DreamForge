@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
   character.energy -= energyCost;
   character.experience += mission.rewards.experience;
   character.credits += mission.rewards.credits;
+  character.merits = (character.merits ?? 0) + (mission.rewards.merits ?? 0);
 
   const levelsGained = applyLevelUps(character);
   character.lastEnergyRegen = new Date();
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   return ok({
     message: `Mission complete: ${mission.title}`,
     narrative: mission.narrative || `You completed: ${mission.description}`,
-    rewards: { experience: mission.rewards.experience, credits: mission.rewards.credits },
+    rewards: { experience: mission.rewards.experience, credits: mission.rewards.credits, merits: mission.rewards.merits ?? 0 },
     levelsGained,
     newLevel: levelsGained > 0 ? character.level : null,
     character: {

@@ -10,6 +10,7 @@ export interface IMission extends Document {
   rewards: {
     experience: number;
     credits: number;
+    merits: number;
     items?: string[];
   };
   requirements: {
@@ -39,6 +40,7 @@ const MissionSchema = new Schema<IMission>(
     rewards: {
       experience: { type: Number, default: 50 },
       credits: { type: Number, default: 100 },
+      merits: { type: Number, default: 0 },
       items: [{ type: String }],
     },
     requirements: {

@@ -11,7 +11,7 @@ interface Mission {
   description: string;
   difficulty: string;
   type: string;
-  rewards: { experience: number; credits: number };
+  rewards: { experience: number; credits: number; merits: number };
   requirements: { level?: number };
   durationMinutes: number;
   energyCost: number;
@@ -78,7 +78,7 @@ export function MissionsPanel() {
       const d = data.data;
       addLog(d.narrative, "narrative");
       addLog(
-        `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢, -${energyCost} EN`,
+        `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢${d.rewards.merits ? `, +${d.rewards.merits} merits` : ""}, -${energyCost} EN`,
         "success"
       );
 
@@ -127,6 +127,9 @@ export function MissionsPanel() {
                   <div className="flex gap-3 text-xs font-mono text-gray-500">
                     <span className="text-yellow-500">+{m.rewards.experience} XP</span>
                     <span className="text-cyan-500">+{m.rewards.credits}¢</span>
+                    {m.rewards.merits > 0 && (
+                      <span className="text-purple-400">+{m.rewards.merits}M</span>
+                    )}
                     <span className={canAfford ? "text-green-700" : "text-red-700"}>
                       -{m.energyCost} EN
                     </span>

@@ -3,117 +3,167 @@ import { connectDB } from "@/lib/db";
 import Character from "@/models/Character";
 import { ok, err, unauthorized } from "@/lib/response";
 
-const ACTIVATE_COST = 50;
-const upgradeCost = (level: number) => 50 * Math.pow(2, level);
-const linkUpgradeCost = (weight: number) => 75 * Math.pow(2, weight - 1);
+const ACTIVATE_COST   = 50;
+const upgradeCost     = (level:  number) => 50  * Math.pow(2, level);
+const linkUpgradeCost = (weight: number) => 75  * Math.pow(2, weight - 1);
 
 export async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
-
   await connectDB();
   const character = await Character.findOne({ userId: session.userId }).select(
     "merits curseTree curseLinks"
   );
   if (!character) return err("Character not found", 404);
-
   return ok({
-    merits: character.merits ?? 1000,
-    curseTree: character.curseTree ?? [],
+    merits:     character.merits     ?? 1000,
+    curseTree:  character.curseTree  ?? [],
     curseLinks: character.curseLinks ?? [],
   });
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return unauthorized();
+  try {
+    const session = await getSession();
+    if (!session) return unauthorized();
+    await connectDB();
 
-  await connectDB();
+    const body = await req.json().catch(() => null);
+    if (!body?.action) return err("Missing action");
+    const { action } = body as { action: string };
 
-  const body = await req.json().catch(() => null);
-  if (!body?.action) return err("Missing action");
+    const char = await Character.findOne({ userId: session.userId });
+    if (!char) return err("Character not found", 404);
 
-  const { action } = body as { action: string };
-  const character = await Character.findOne({ userId: session.userId });
-  if (!character) return err("Character not found", 404);
+    const merits = char.merits ?? 1000;
 
-  const merits = character.merits ?? 1000;
+    // ── activate ────────────────────────────────────────────────────────────
+    if (action === "activate") {
+      const { skillId } = body as { skillId: string };
+      if (!skillId) return err("Missing skillId");
+      if ((char.curseTree ?? []).some((n: { skillId: string }) => n.skillId === skillId))
+        return err("Already activated");
+      if (merits < ACTIVATE_COST) return err("Not enough merits");
 
-  // ── Skill actions ─────────────────────────────────────────────────────────
-  if (action === "activate") {
-    const { skillId } = body as { skillId: string };
-    if (!skillId) return err("Missing skillId");
-    if (character.curseTree?.find((n) => n.skillId === skillId)) return err("Already activated");
-    if (merits < ACTIVATE_COST) return err("Not enough merits");
+      const newTree = [
+        ...(char.curseTree ?? []).map((n: { skillId: string; level: number }) => ({
+          skillId: n.skillId, level: n.level,
+        })),
+        { skillId, level: 1 },
+      ];
+      const updated = await Character.findOneAndUpdate(
+        { _id: char._id },
+        { $set: { curseTree: newTree, merits: merits - ACTIVATE_COST } },
+        { new: true }
+      );
+      console.log(`[activate] saved curseTree len=${updated?.curseTree?.length}`);
+      return ok({ merits: updated?.merits ?? merits - ACTIVATE_COST, curseTree: updated?.curseTree ?? newTree });
+    }
 
-    character.merits = merits - ACTIVATE_COST;
-    character.curseTree = [...(character.curseTree ?? []), { skillId, level: 1 }];
-    await character.save();
-    return ok({ merits: character.merits, curseTree: character.curseTree });
+    // ── upgrade ─────────────────────────────────────────────────────────────
+    if (action === "upgrade") {
+      const { skillId } = body as { skillId: string };
+      if (!skillId) return err("Missing skillId");
+
+      console.log(`[upgrade] looking for skillId="${skillId}" in curseTree:`, JSON.stringify(char.curseTree));
+
+      const node = (char.curseTree ?? []).find((n: { skillId: string }) => n.skillId === skillId);
+      if (!node) return err("Skill not activated");
+      const cost = upgradeCost(node.level);
+      if (merits < cost) return err("Not enough merits");
+
+      const newTree = (char.curseTree ?? []).map((n: { skillId: string; level: number }) =>
+        n.skillId === skillId ? { skillId: n.skillId, level: n.level + 1 } : { skillId: n.skillId, level: n.level }
+      );
+      const updated = await Character.findOneAndUpdate(
+        { _id: char._id },
+        { $set: { curseTree: newTree, merits: merits - cost } },
+        { new: true }
+      );
+      const newNode = (updated?.curseTree ?? []).find((n: { skillId: string }) => n.skillId === skillId);
+      return ok({ merits: updated?.merits ?? merits - cost, newLevel: newNode?.level ?? node.level + 1 });
+    }
+
+    // ── addLink ─────────────────────────────────────────────────────────────
+    if (action === "addLink") {
+      const { from, to } = body as { from: string; to: string };
+      if (!from || !to) return err("Missing from/to");
+      if (from === to) return err("Cannot link a skill to itself");
+      const exists = (char.curseLinks ?? []).some(
+        (l: { from: string; to: string }) =>
+          (l.from === from && l.to === to) || (l.from === to && l.to === from)
+      );
+      if (exists) return err("Link already exists");
+
+      const newLinks = [
+        ...(char.curseLinks ?? []).map((l: { from: string; to: string; weight: number }) => ({
+          from: l.from, to: l.to, weight: l.weight,
+        })),
+        { from, to, weight: 1 },
+      ];
+      const updated = await Character.findOneAndUpdate(
+        { _id: char._id },
+        { $set: { curseLinks: newLinks } },
+        { new: true }
+      );
+      return ok({ merits: updated?.merits ?? merits, curseLinks: updated?.curseLinks ?? newLinks });
+    }
+
+    // ── upgradeLink ─────────────────────────────────────────────────────────
+    if (action === "upgradeLink") {
+      const { from, to } = body as { from: string; to: string };
+      if (!from || !to) return err("Missing from/to");
+
+      console.log(`[upgradeLink] from="${from}" to="${to}" curseLinks:`, JSON.stringify(char.curseLinks));
+
+      const link = (char.curseLinks ?? []).find(
+        (l: { from: string; to: string }) =>
+          (l.from === from && l.to === to) || (l.from === to && l.to === from)
+      );
+      if (!link) return err("Link not found");
+      const cost = linkUpgradeCost(link.weight);
+      if (merits < cost) return err("Not enough merits");
+
+      const newLinks = (char.curseLinks ?? []).map((l: { from: string; to: string; weight: number }) => {
+        const match = (l.from === from && l.to === to) || (l.from === to && l.to === from);
+        return { from: l.from, to: l.to, weight: match ? l.weight + 1 : l.weight };
+      });
+      const updated = await Character.findOneAndUpdate(
+        { _id: char._id },
+        { $set: { curseLinks: newLinks, merits: merits - cost } },
+        { new: true }
+      );
+      const updatedLink = (updated?.curseLinks ?? []).find(
+        (l: { from: string; to: string }) =>
+          (l.from === from && l.to === to) || (l.from === to && l.to === from)
+      );
+      return ok({ merits: updated?.merits ?? merits - cost, newWeight: updatedLink?.weight ?? link.weight + 1 });
+    }
+
+    // ── removeLink ──────────────────────────────────────────────────────────
+    if (action === "removeLink") {
+      const { from, to } = body as { from: string; to: string };
+      if (!from || !to) return err("Missing from/to");
+
+      const newLinks = (char.curseLinks ?? [])
+        .filter(
+          (l: { from: string; to: string }) =>
+            !((l.from === from && l.to === to) || (l.from === to && l.to === from))
+        )
+        .map((l: { from: string; to: string; weight: number }) => ({
+          from: l.from, to: l.to, weight: l.weight,
+        }));
+      const updated = await Character.findOneAndUpdate(
+        { _id: char._id },
+        { $set: { curseLinks: newLinks } },
+        { new: true }
+      );
+      return ok({ merits: updated?.merits ?? merits, curseLinks: updated?.curseLinks ?? newLinks });
+    }
+
+    return err("Unknown action");
+  } catch (e) {
+    console.error("[curse-tree POST]", e);
+    return err("Internal server error", 500);
   }
-
-  if (action === "upgrade") {
-    const { skillId } = body as { skillId: string };
-    if (!skillId) return err("Missing skillId");
-    const node = character.curseTree?.find((n) => n.skillId === skillId);
-    if (!node) return err("Skill not activated");
-
-    const cost = upgradeCost(node.level);
-    if (merits < cost) return err("Not enough merits");
-
-    character.merits = merits - cost;
-    node.level += 1;
-    character.markModified("curseTree");
-    await character.save();
-    return ok({ merits: character.merits, newLevel: node.level });
-  }
-
-  // ── Link actions ──────────────────────────────────────────────────────────
-  if (action === "addLink") {
-    const { from, to } = body as { from: string; to: string };
-    if (!from || !to) return err("Missing from/to");
-    if (from === to) return err("Cannot link a skill to itself");
-
-    const exists = character.curseLinks?.some(
-      (l) => (l.from === from && l.to === to) || (l.from === to && l.to === from)
-    );
-    if (exists) return err("Link already exists");
-
-    character.curseLinks = [...(character.curseLinks ?? []), { from, to, weight: 1 }];
-    await character.save();
-    return ok({ merits: character.merits, curseLinks: character.curseLinks });
-  }
-
-  if (action === "upgradeLink") {
-    const { from, to } = body as { from: string; to: string };
-    if (!from || !to) return err("Missing from/to");
-
-    const link = character.curseLinks?.find(
-      (l) => (l.from === from && l.to === to) || (l.from === to && l.to === from)
-    );
-    if (!link) return err("Link not found");
-
-    const cost = linkUpgradeCost(link.weight);
-    if (merits < cost) return err("Not enough merits");
-
-    character.merits = merits - cost;
-    link.weight += 1;
-    character.markModified("curseLinks");
-    await character.save();
-    return ok({ merits: character.merits, newWeight: link.weight });
-  }
-
-  if (action === "removeLink") {
-    const { from, to } = body as { from: string; to: string };
-    if (!from || !to) return err("Missing from/to");
-
-    character.curseLinks = (character.curseLinks ?? []).filter(
-      (l) => !((l.from === from && l.to === to) || (l.from === to && l.to === from))
-    );
-    character.markModified("curseLinks");
-    await character.save();
-    return ok({ merits: character.merits, curseLinks: character.curseLinks });
-  }
-
-  return err("Unknown action");
 }
