@@ -2,10 +2,16 @@ import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Character from "@/models/Character";
 import { ok, err, unauthorized } from "@/lib/response";
+import { SKILL_NAMES, SKILL_STATS, MAX_CURSE_LEVEL } from "@/lib/curseSkills";
 
 const ACTIVATE_COST   = 50;
 const upgradeCost     = (level:  number) => 50  * Math.pow(2, level);
 const linkUpgradeCost = (weight: number) => 75  * Math.pow(2, weight - 1);
+
+function statOf(skillId: string) {
+  const idx = SKILL_NAMES.indexOf(skillId);
+  return idx >= 0 ? SKILL_STATS[idx] : null;
+}
 
 export async function GET() {
   const session = await getSession();
@@ -51,13 +57,26 @@ export async function POST(req: Request) {
         })),
         { skillId, level: 1 },
       ];
+
+      const stat    = statOf(skillId);
+      const setPayload: Record<string, unknown> = {
+        curseTree: newTree,
+        merits: merits - ACTIVATE_COST,
+      };
+      if (stat) setPayload[stat] = (char[stat] ?? 5) + 1; // level 1 → +1 stat
+
       const updated = await Character.findOneAndUpdate(
         { _id: char._id },
-        { $set: { curseTree: newTree, merits: merits - ACTIVATE_COST } },
+        { $set: setPayload },
         { new: true }
       );
-      console.log(`[activate] saved curseTree len=${updated?.curseTree?.length}`);
-      return ok({ merits: updated?.merits ?? merits - ACTIVATE_COST, curseTree: updated?.curseTree ?? newTree });
+      console.log(`[activate] ${skillId} → +1 ${stat ?? "?"}, merits=${updated?.merits}`);
+      return ok({
+        merits:   updated?.merits ?? merits - ACTIVATE_COST,
+        curseTree: updated?.curseTree ?? newTree,
+        stat,
+        statValue: stat ? updated?.[stat] : null,
+      });
     }
 
     // ── upgrade ─────────────────────────────────────────────────────────────
@@ -65,23 +84,39 @@ export async function POST(req: Request) {
       const { skillId } = body as { skillId: string };
       if (!skillId) return err("Missing skillId");
 
-      console.log(`[upgrade] looking for skillId="${skillId}" in curseTree:`, JSON.stringify(char.curseTree));
-
       const node = (char.curseTree ?? []).find((n: { skillId: string }) => n.skillId === skillId);
       if (!node) return err("Skill not activated");
+      if (node.level >= MAX_CURSE_LEVEL)
+        return err(`Already at max level (${MAX_CURSE_LEVEL})`);
+
       const cost = upgradeCost(node.level);
       if (merits < cost) return err("Not enough merits");
 
       const newTree = (char.curseTree ?? []).map((n: { skillId: string; level: number }) =>
-        n.skillId === skillId ? { skillId: n.skillId, level: n.level + 1 } : { skillId: n.skillId, level: n.level }
+        n.skillId === skillId
+          ? { skillId: n.skillId, level: n.level + 1 }
+          : { skillId: n.skillId, level: n.level }
       );
+
+      const stat    = statOf(skillId);
+      const setPayload: Record<string, unknown> = {
+        curseTree: newTree,
+        merits: merits - cost,
+      };
+      if (stat) setPayload[stat] = (char[stat] ?? 5) + 1; // each upgrade → +1 stat
+
       const updated = await Character.findOneAndUpdate(
         { _id: char._id },
-        { $set: { curseTree: newTree, merits: merits - cost } },
+        { $set: setPayload },
         { new: true }
       );
       const newNode = (updated?.curseTree ?? []).find((n: { skillId: string }) => n.skillId === skillId);
-      return ok({ merits: updated?.merits ?? merits - cost, newLevel: newNode?.level ?? node.level + 1 });
+      return ok({
+        merits:   updated?.merits ?? merits - cost,
+        newLevel: newNode?.level  ?? node.level + 1,
+        stat,
+        statValue: stat ? updated?.[stat] : null,
+      });
     }
 
     // ── addLink ─────────────────────────────────────────────────────────────
@@ -113,8 +148,6 @@ export async function POST(req: Request) {
     if (action === "upgradeLink") {
       const { from, to } = body as { from: string; to: string };
       if (!from || !to) return err("Missing from/to");
-
-      console.log(`[upgradeLink] from="${from}" to="${to}" curseLinks:`, JSON.stringify(char.curseLinks));
 
       const link = (char.curseLinks ?? []).find(
         (l: { from: string; to: string }) =>

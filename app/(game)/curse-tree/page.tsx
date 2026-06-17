@@ -3,37 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
-
-// ── 133 skill names ───────────────────────────────────────────────────────
-const SKILL_NAMES: string[] = [
-  "Strength","Agility","Speed","Endurance","Power",
-  "Resilience","Constitution","Dexterity","Fortitude","Stamina",
-  "Vigor","Toughness","Might","Brawn","Hardiness",
-  "Swiftness","Precision","Balance","Reflex","Coordination",
-  "Intelligence","Wisdom","Perception","Focus","Clarity",
-  "Intuition","Cunning","Strategy","Foresight","Memory",
-  "Analysis","Awareness","Acuity","Insight","Deduction",
-  "Lethality","Brutality","Ferocity","Fury","Berserker",
-  "Duelist","Marksmanship","Bladework","Parry","Counter",
-  "Feint","Assault","Warmonger","Slayer","Hunter",
-  "Predator","Conqueror","Vanguard","Warlord","Reaper",
-  "Stealth","Camouflage","Tracking","Foraging","Tenacity",
-  "Perseverance","Willpower","Grit","Resolve","Adaptability",
-  "Outlast","Scavenge","Wanderer","Endure","Fortify",
-  "Charisma","Intimidation","Persuasion","Leadership","Command",
-  "Authority","Influence","Presence","Dominance","Sovereign",
-  "Curse","Hex","Blight","Shadow","Void",
-  "Phantom","Wraith","Specter","Omen","Augury",
-  "Prophecy","Entropy","Decay","Wither","Plague",
-  "Corruption","Oblivion","Abyss","Nightmare","Dread",
-  "Firestarter","Frostbite","Thunderstrike","Earthshaker","Galeforce",
-  "Torrent","Radiance","Eclipse","Arcane","Mystic",
-  "Sorcery","Conduit","Channeling",
-  "Overdrive","Surge","Burst","Chain","Echo",
-  "Resonance","Synergy","Cascade","Avalanche","Tempest",
-  "Vortex","Nexus","Transcend","Ascend","Apex",
-  "Pinnacle","Zenith","Convergence","Singularity","Revelation",
-];
+import { SKILL_NAMES, SKILL_STATS, STAT_LABEL, STAT_GLOW, MAX_CURSE_LEVEL } from "@/lib/curseSkills";
 
 const ACTIVATE_COST   = 50;
 const upgradeCost     = (level:  number) => 50 * Math.pow(2, level);
@@ -309,10 +279,12 @@ export default function CurseTreePage() {
         const isLinking = linkingFrom === p.id;
         const r = p.activated ? 5 + (p.level - 1) * 1.5 : isSel ? 5 : 3;
 
+        const statGlow = p.activated ? STAT_GLOW[SKILL_STATS[p.id]] : null;
+
         ctx.save();
         if (p.activated || isSel || isLinking) {
           ctx.shadowBlur  = isLinking ? 26 : isSel ? 20 : 10 + (p.level - 1) * 4;
-          ctx.shadowColor = isLinking ? "#ffaa00" : isSel ? "#00ffff" : levelColor(p.level);
+          ctx.shadowColor = isLinking ? "#ffaa00" : p.activated ? (statGlow ?? levelColor(p.level)) : isSel ? "#00ffff" : levelColor(p.level);
         }
         if (isLinking) {
           ctx.beginPath();
@@ -330,6 +302,13 @@ export default function CurseTreePage() {
         ctx.textAlign = "center";
         ctx.fillStyle = p.activated ? "#fff" : isSel ? "#00ffff" : "rgba(120,120,155,0.4)";
         ctx.fillText(p.name, p.x, p.y + r + 10);
+
+        // Stat abbreviation under name for activated particles
+        if (p.activated) {
+          ctx.font = "6px monospace";
+          ctx.fillStyle = statGlow ?? "#aaa";
+          ctx.fillText(STAT_LABEL[SKILL_STATS[p.id]], p.x, p.y + r + 19);
+        }
 
         if (p.activated && p.level > 1) {
           ctx.font = "7px monospace";
@@ -528,17 +507,19 @@ export default function CurseTreePage() {
       p.targetX = t.x; p.targetY = t.y; p.vx = 0; p.vy = 0;
       setMerits(json.data.merits);
       setActivatedMap(prev => new Map(prev).set(p.id, 1));
-      flash(`${p.name} activated!`);
+      const sl = STAT_LABEL[SKILL_STATS[p.id]];
+      flash(`${p.name} activated! +1 ${sl}`);
     } finally { setActionLoading(false); }
   }, [selParticleId, merits, actionLoading, flash]);
 
   // ── Skill upgrade (uses activatedMap — not p.activated — to avoid stale ref) ──
   const upgradeSelected = useCallback(async () => {
     if (selParticleId === null || actionLoading) return;
-    if (!activatedMap.has(selParticleId)) return; // gate on React state, not ref
+    if (!activatedMap.has(selParticleId)) return;
     const p   = particlesRef.current.find(q => q.id === selParticleId);
     const lvl = activatedMap.get(selParticleId)!;
     if (!p) return;
+    if (lvl >= MAX_CURSE_LEVEL) { flash(`Max level (${MAX_CURSE_LEVEL}) reached!`); return; }
     const cost = upgradeCost(lvl);
     if (merits < cost) { flash("Not enough merits!"); return; }
     setActionLoading(true);
@@ -549,7 +530,8 @@ export default function CurseTreePage() {
       p.level = json.data.newLevel;
       setMerits(json.data.merits);
       setActivatedMap(prev => new Map(prev).set(p.id, json.data.newLevel));
-      flash(`${p.name} → Level ${p.level}!`);
+      const sl = STAT_LABEL[SKILL_STATS[p.id]];
+      flash(`${p.name} L${p.level} · +1 ${sl}`);
     } finally { setActionLoading(false); }
   }, [selParticleId, activatedMap, merits, actionLoading, flash]);
 
@@ -660,14 +642,28 @@ export default function CurseTreePage() {
         </div>
 
         {/* Skill panel */}
-        {selParticle && !selLink && (
+        {selParticle && !selLink && (() => {
+          const skillStat  = SKILL_STATS[selParticle.id];
+          const statLabel  = STAT_LABEL[skillStat];
+          const statColor  = STAT_GLOW[skillStat];
+          const atMax      = selLevel >= MAX_CURSE_LEVEL;
+          return (
           <div className="absolute bottom-5 left-1/2 -translate-x-1/2 border border-gray-700 bg-[#05050f]/95 backdrop-blur px-5 py-3 flex items-center gap-4 font-mono text-xs pointer-events-auto shadow-2xl">
-            <div className="min-w-[110px]">
+            <div className="min-w-[130px]">
               <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Skill</div>
               <div className="text-base font-bold mt-0.5" style={{ color: isActivated ? levelColor(selLevel) : "#00e5ff" }}>
                 {selParticle.name}
               </div>
-              {isActivated && <div className="text-gray-600">Level {selLevel}</div>}
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: statColor, border: `1px solid ${statColor}55`, background: `${statColor}11` }}>
+                  {statLabel}
+                </span>
+                {isActivated && (
+                  <span className="text-gray-600 text-[10px]">
+                    L{selLevel}/{MAX_CURSE_LEVEL} · +{selLevel} {statLabel}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="w-px h-10 bg-gray-800" />
 
@@ -677,16 +673,20 @@ export default function CurseTreePage() {
                   className="px-4 py-1.5 border border-cyan-800 text-cyan-400 hover:bg-cyan-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
                   {actionLoading ? "..." : "ACTIVATE"}
                 </button>
-                <span className="text-[10px] text-gray-600">{ACTIVATE_COST} merits</span>
+                <span className="text-[10px] text-gray-600">{ACTIVATE_COST} merits · +1 {statLabel}</span>
               </div>
             ) : (
               <>
                 <div className="flex flex-col items-center gap-1">
-                  <button onClick={upgradeSelected} disabled={actionLoading || merits < upgradeCost(selLevel)}
-                    className="px-4 py-1.5 border border-purple-800 text-purple-400 hover:bg-purple-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                    {actionLoading ? "..." : `UPGRADE L${selLevel}→L${selLevel + 1}`}
-                  </button>
-                  <span className="text-[10px] text-gray-600">{upgradeCost(selLevel).toLocaleString()} merits</span>
+                  {atMax ? (
+                    <span className="px-4 py-1.5 border border-gray-700 text-gray-600 tracking-wider">MAX LEVEL</span>
+                  ) : (
+                    <button onClick={upgradeSelected} disabled={actionLoading || merits < upgradeCost(selLevel)}
+                      className="px-4 py-1.5 border border-purple-800 text-purple-400 hover:bg-purple-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                      {actionLoading ? "..." : `L${selLevel}→${selLevel + 1} +1${statLabel}`}
+                    </button>
+                  )}
+                  {!atMax && <span className="text-[10px] text-gray-600">{upgradeCost(selLevel).toLocaleString()} merits</span>}
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <button onClick={() => { linkingFromRef.current = selParticleId; setLinkingFromId(selParticleId); }}
@@ -701,7 +701,8 @@ export default function CurseTreePage() {
             <button onClick={() => { selParticleRef.current = null; setSelParticleId(null); linkingFromRef.current = null; setLinkingFromId(null); }}
               className="text-gray-600 hover:text-gray-400 px-1 text-base">✕</button>
           </div>
-        )}
+          );
+        })()}
 
         {/* Link panel */}
         {selLink && !selParticle && (
