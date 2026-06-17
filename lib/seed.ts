@@ -429,12 +429,17 @@ export async function seed() {
   await connectDB();
   console.log("Seeding database...");
 
-  // Missions
-  const missionCount = await Mission.countDocuments();
-  if (missionCount === 0) {
-    await Mission.insertMany(INITIAL_MISSIONS);
-    console.log(`Seeded ${INITIAL_MISSIONS.length} missions`);
-  }
+  // Missions — upsert by title+location so re-seeding updates existing docs (e.g. adds new reward fields)
+  await Mission.bulkWrite(
+    INITIAL_MISSIONS.map((m) => ({
+      updateOne: {
+        filter: { title: m.title, location: m.location },
+        update: { $set: m as any },
+        upsert: true,
+      },
+    }))
+  );
+  console.log(`Upserted ${INITIAL_MISSIONS.length} missions`);
 
   // Items
   const itemCount = await Item.countDocuments();

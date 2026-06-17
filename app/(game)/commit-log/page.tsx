@@ -59,11 +59,11 @@ export default function CommitLogPage() {
   const { user, setUser, setCharacter } = useGameStore();
 
   const [data, setData] = useState<CommitData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -138,9 +138,11 @@ export default function CommitLogPage() {
             >
               {loading ? "FETCHING..." : "↻ REFRESH"}
             </button>
-            <span className="text-xs font-mono text-gray-700">
-              Updated {timeAgo(lastRefresh.toISOString())}
-            </span>
+            {lastRefresh && (
+              <span className="text-xs font-mono text-gray-700">
+                Updated {timeAgo(lastRefresh.toISOString())}
+              </span>
+            )}
           </div>
         </div>
       </div>

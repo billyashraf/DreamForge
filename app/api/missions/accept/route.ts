@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       level: character.level,
       experience: character.experience,
       credits: character.credits,
+      merits: character.merits,
       health: character.health,
       maxHealth: character.maxHealth,
       energy: character.energy,
