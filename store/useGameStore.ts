@@ -28,6 +28,7 @@ interface CharacterState {
   maxPain?: number;
   madness?: number;
   lastPainUpdate?: string | null;
+  shadowForm?: string | null;
 }
 
 interface UserState {

@@ -11,6 +11,11 @@ export interface ICurseLink {
   weight: number;
 }
 
+export interface IAcademyNode {
+  fieldId: string;
+  level: number;
+}
+
 export interface ICharacter extends Document {
   userId: Types.ObjectId;
   name: string;
@@ -43,8 +48,10 @@ export interface ICharacter extends Document {
   madness: number;
   lastPainUpdate?: Date;
   merits: number;
+  shadowForm: string | null;
   curseTree: ICurseNode[];
   curseLinks: ICurseLink[];
+  academyTree: IAcademyNode[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +89,7 @@ const CharacterSchema = new Schema<ICharacter>(
     madness:       { type: Number, default: 0 },
     lastPainUpdate: { type: Date },
     merits: { type: Number, default: 1000 },
+    shadowForm: { type: String, default: null },
     curseTree: [
       {
         skillId: { type: String, required: true },
@@ -93,6 +101,12 @@ const CharacterSchema = new Schema<ICharacter>(
         from: { type: String, required: true },
         to: { type: String, required: true },
         weight: { type: Number, default: 1, min: 1 },
+      },
+    ],
+    academyTree: [
+      {
+        fieldId: { type: String, required: true },
+        level: { type: Number, default: 1, min: 1 },
       },
     ],
   },

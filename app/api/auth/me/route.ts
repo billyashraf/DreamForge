@@ -15,7 +15,7 @@ export async function GET() {
   if (!user) return unauthorized();
 
   const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen"
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm"
   );
 
   if (character) await applyEnergyRegen(character);

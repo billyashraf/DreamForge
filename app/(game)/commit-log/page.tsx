@@ -56,7 +56,7 @@ function formatDate(dateStr: string): string {
 
 export default function CommitLogPage() {
   const router = useRouter();
-  const { user, setUser, setCharacter } = useGameStore();
+  const { user, character, setUser, setCharacter } = useGameStore();
 
   const [data, setData] = useState<CommitData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +108,27 @@ export default function CommitLogPage() {
 
   const featCount  = data?.commits.filter((c) => parseCommit(c.message).type === "feat").length ?? 0;
   const fixCount   = data?.commits.filter((c) => parseCommit(c.message).type === "fix").length ?? 0;
+
+  // Gate: Saber form required
+  const shadowForm = character?.shadowForm ?? null;
+  if (user && character && shadowForm !== "saber") {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
+        <div className="text-5xl text-amber-900">◈</div>
+        <div className="font-mono text-amber-500 text-lg font-bold tracking-widest uppercase">Commit Log Locked</div>
+        <div className="font-mono text-gray-500 text-sm max-w-xs leading-relaxed">
+          Only the <span className="text-amber-400 font-bold">Saber</span> form may read the chronicles of creation.
+          The blade that writes history is also the one that executes.
+        </div>
+        <button
+          onClick={() => router.push("/shadow-form")}
+          className="mt-2 px-6 py-2 border border-amber-900 text-amber-700 hover:text-amber-400 hover:border-amber-600 font-mono text-xs tracking-widest transition-colors"
+        >
+          SELECT SHADOW FORM →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-8">

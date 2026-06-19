@@ -6,10 +6,15 @@ import { useRouter } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
 
 export function Navbar() {
-  const user = useGameStore((s) => s.user);
-  const reset = useGameStore((s) => s.reset);
-  const router = useRouter();
+  const user       = useGameStore((s) => s.user);
+  const character  = useGameStore((s) => s.character);
+  const reset      = useGameStore((s) => s.reset);
+  const router     = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const shadowForm    = character?.shadowForm ?? null;
+  const canAcademy    = shadowForm === "rider";
+  const canSaberGated = shadowForm === "saber";
 
   async function logout() {
     setLoggingOut(true);
@@ -28,14 +33,55 @@ export function Navbar() {
           <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>
           <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
           <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
-          <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">Commit Log</Link>
-          <Link href="/curse-tree" className="hover:text-purple-300 transition-colors text-purple-600 font-semibold">Curse Tree</Link>
+
+          {/* Commit Log — Saber only */}
+          {canSaberGated ? (
+            <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">
+              Commit Log
+            </Link>
+          ) : (
+            <span
+              title="Requires Saber form"
+              className="text-gray-800 cursor-not-allowed select-none"
+            >
+              Commit Log
+            </span>
+          )}
+
+          <Link href="/curse-tree" className="hover:text-purple-300 transition-colors text-purple-600 font-semibold">
+            Curse Tree
+          </Link>
+
+          {/* Academy — Rider only */}
+          {canAcademy ? (
+            <Link href="/academy" className="hover:text-amber-300 transition-colors text-amber-600 font-semibold">
+              Academy
+            </Link>
+          ) : (
+            <span
+              title="Requires Rider form"
+              className="text-yellow-900 cursor-not-allowed select-none font-semibold"
+            >
+              Academy
+            </span>
+          )}
+
+          {/* Shadow Form */}
+          <Link href="/shadow-form" className="hover:text-indigo-300 transition-colors text-indigo-600 font-semibold">
+            Shadow Form
+          </Link>
+
           {user?.role !== "player" && (
             <Link href="/admin" className="text-red-500 hover:text-red-400 transition-colors">Admin</Link>
           )}
         </div>
       </div>
       <div className="flex items-center gap-3">
+        {shadowForm && (
+          <span className="text-[10px] font-mono text-gray-700 hidden sm:block uppercase tracking-widest">
+            ◆ {shadowForm}
+          </span>
+        )}
         {user && (
           <span className="text-xs font-mono text-gray-600 hidden sm:block">
             [{user.role.toUpperCase()}] {user.username}
