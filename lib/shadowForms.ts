@@ -45,7 +45,7 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#ffd700",
     glow: "#ffd70099",
     statBonus: "STR + INT + AGI",
-    unlocks: "Missions · Commit Log",
+    unlocks: "Missions",
     isCenter: true,
   },
   {
@@ -56,7 +56,7 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#a855f7",
     glow: "#a855f799",
     statBonus: "AGI ×2",
-    unlocks: "–",
+    unlocks: "All content · All locations",
   },
   {
     id: "archer",
@@ -66,7 +66,7 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#22c55e",
     glow: "#22c55e99",
     statBonus: "AGI + INT",
-    unlocks: "–",
+    unlocks: "Moon Junkyard · Earth",
   },
   {
     id: "rider",
@@ -86,7 +86,7 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#ef4444",
     glow: "#ef444499",
     statBonus: "STR ×2",
-    unlocks: "–",
+    unlocks: "Mars",
   },
   {
     id: "lancer",
@@ -96,7 +96,7 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#3b82f6",
     glow: "#3b82f699",
     statBonus: "STR + AGI",
-    unlocks: "–",
+    unlocks: "Commit Log",
   },
   {
     id: "caster",
@@ -106,8 +106,40 @@ export const SHADOW_FORMS: ShadowForm[] = [
     color: "#8b5cf6",
     glow: "#8b5cf699",
     statBonus: "INT ×2",
-    unlocks: "–",
+    unlocks: "Mars · Guilds",
   },
 ];
 
 export const FORM_MAP = new Map(SHADOW_FORMS.map(f => [f.id, f]));
+
+// ── Access control ────────────────────────────────────────────────────────────
+
+/** Which forms may access each piece of content. */
+export const CONTENT_ACCESS: Record<string, ShadowFormId[]> = {
+  missions:  ["saber",  "assassin"],
+  commitLog: ["lancer", "assassin"],
+  academy:   ["rider",  "assassin"],
+  guilds:    ["caster", "assassin"],
+};
+
+/** Which forms may travel to each location (metapolis always accessible). */
+export const LOCATION_ACCESS: Record<string, ShadowFormId[]> = {
+  moon_junkyard: ["archer", "assassin"],
+  earth:         ["archer", "assassin"],
+  mars:          ["caster", "berserker", "assassin"],
+};
+
+export function canAccess(form: string | null | undefined, content: string): boolean {
+  if (!form) return false;
+  const allowed = CONTENT_ACCESS[content];
+  if (!allowed) return true;
+  return (allowed as string[]).includes(form);
+}
+
+export function canTravelTo(form: string | null | undefined, locationId: string): boolean {
+  if (locationId === "metapolis") return true;
+  if (!form) return false;
+  const allowed = LOCATION_ACCESS[locationId];
+  if (!allowed) return true;
+  return (allowed as string[]).includes(form);
+}

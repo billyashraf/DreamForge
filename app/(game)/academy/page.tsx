@@ -437,8 +437,8 @@ export default function AcademyPage() {
   const totalUnlocked = unlockedMap.size;
   const shadowForm = character?.shadowForm ?? null;
 
-  // ── Gate: Rider form required ─────────────────────────────────────────────
-  if (pageReady && shadowForm !== "rider") {
+  // ── Gate: Rider or Assassin form required ──────────────────────────────────
+  if (pageReady && shadowForm !== "rider" && shadowForm !== "assassin") {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
         <div className="text-5xl text-yellow-900">◈</div>

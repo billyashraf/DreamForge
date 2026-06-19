@@ -109,20 +109,21 @@ export default function CommitLogPage() {
   const featCount  = data?.commits.filter((c) => parseCommit(c.message).type === "feat").length ?? 0;
   const fixCount   = data?.commits.filter((c) => parseCommit(c.message).type === "fix").length ?? 0;
 
-  // Gate: Saber form required
+  // Gate: Lancer or Assassin form required
   const shadowForm = character?.shadowForm ?? null;
-  if (user && character && shadowForm !== "saber") {
+  if (user && character && shadowForm !== "lancer" && shadowForm !== "assassin") {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
-        <div className="text-5xl text-amber-900">◈</div>
-        <div className="font-mono text-amber-500 text-lg font-bold tracking-widest uppercase">Commit Log Locked</div>
+        <div className="text-5xl text-blue-900">◈</div>
+        <div className="font-mono text-blue-500 text-lg font-bold tracking-widest uppercase">Commit Log Locked</div>
         <div className="font-mono text-gray-500 text-sm max-w-xs leading-relaxed">
-          Only the <span className="text-amber-400 font-bold">Saber</span> form may read the chronicles of creation.
-          The blade that writes history is also the one that executes.
+          Only the <span className="text-blue-400 font-bold">Lancer</span> or{" "}
+          <span className="text-purple-400 font-bold">Assassin</span> form may read the chronicles of creation.
+          The lance that pierces records what others cannot see.
         </div>
         <button
           onClick={() => router.push("/shadow-form")}
-          className="mt-2 px-6 py-2 border border-amber-900 text-amber-700 hover:text-amber-400 hover:border-amber-600 font-mono text-xs tracking-widest transition-colors"
+          className="mt-2 px-6 py-2 border border-blue-900 text-blue-700 hover:text-blue-400 hover:border-blue-600 font-mono text-xs tracking-widest transition-colors"
         >
           SELECT SHADOW FORM →
         </button>

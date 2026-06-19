@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { canTravelTo } from "@/lib/shadowForms";
 
 const DESTINATIONS = [
   {
@@ -52,6 +53,8 @@ export function TravelPanel() {
 
   if (!character) return null;
 
+  const shadowForm = character.shadowForm ?? null;
+
   async function travel(destination: string) {
     setLoading(destination);
     try {
@@ -83,29 +86,43 @@ export function TravelPanel() {
     <Card title="Travel Gates" accent="yellow">
       <div className="space-y-2">
         {DESTINATIONS.map((dest) => {
-          const isHere = character.currentLocation === dest.id;
-          const canAfford = character.credits >= dest.cost;
-          const meetsLevel = character.level >= dest.levelReq;
+          const isHere      = character.currentLocation === dest.id;
+          const canAfford   = character.credits >= dest.cost;
+          const meetsLevel  = character.level >= dest.levelReq;
+          const formAllowed = canTravelTo(shadowForm, dest.id);
+          const blocked     = !formAllowed;
+
+          const FORM_HINT: Record<string, string> = {
+            moon_junkyard: "Archer · Assassin",
+            earth:         "Archer · Assassin",
+            mars:          "Caster · Berserker · Assassin",
+          };
 
           return (
-            <div key={dest.id} className={`flex items-center gap-3 p-2 border ${isHere ? "border-gray-600 bg-gray-900" : "border-gray-800"}`}>
+            <div key={dest.id} className={`flex items-center gap-3 p-2 border ${isHere ? "border-gray-600 bg-gray-900" : blocked ? "border-gray-900 opacity-50" : "border-gray-800"}`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-mono font-medium ${dest.accent}`}>{dest.label}</span>
+                  <span className={`text-sm font-mono font-medium ${blocked ? "text-gray-700" : dest.accent}`}>{dest.label}</span>
                   <span className="text-xs text-gray-600">·</span>
                   <span className="text-xs text-gray-500">{dest.world}</span>
                   {isHere && <span className="text-xs font-mono text-cyan-600">[HERE]</span>}
+                  {blocked && <span className="text-xs font-mono text-gray-700">[LOCKED]</span>}
                 </div>
                 <p className="text-xs text-gray-600 mt-0.5 truncate">{dest.description}</p>
-                <div className="flex gap-3 mt-1">
-                  {dest.cost > 0 && (
+                <div className="flex gap-3 mt-1 flex-wrap">
+                  {dest.cost > 0 && !blocked && (
                     <span className={`text-xs font-mono ${canAfford ? "text-gray-500" : "text-red-600"}`}>
                       {dest.cost}¢
                     </span>
                   )}
-                  {dest.levelReq > 1 && (
+                  {dest.levelReq > 1 && !blocked && (
                     <span className={`text-xs font-mono ${meetsLevel ? "text-gray-500" : "text-red-600"}`}>
                       LVL {dest.levelReq}+
+                    </span>
+                  )}
+                  {blocked && FORM_HINT[dest.id] && (
+                    <span className="text-xs font-mono text-gray-700">
+                      Requires: {FORM_HINT[dest.id]}
                     </span>
                   )}
                 </div>
@@ -113,11 +130,12 @@ export function TravelPanel() {
               <Button
                 size="sm"
                 variant={isHere ? "ghost" : "secondary"}
-                disabled={isHere || !canAfford || !meetsLevel}
+                disabled={isHere || !canAfford || !meetsLevel || blocked}
                 loading={loading === dest.id}
                 onClick={() => travel(dest.id)}
+                title={blocked ? `Requires ${FORM_HINT[dest.id] ?? "specific"} form` : undefined}
               >
-                {isHere ? "HERE" : "GO"}
+                {isHere ? "HERE" : blocked ? "LOCKED" : "GO"}
               </Button>
             </div>
           );

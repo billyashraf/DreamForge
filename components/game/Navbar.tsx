@@ -12,9 +12,10 @@ export function Navbar() {
   const router     = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const shadowForm    = character?.shadowForm ?? null;
-  const canAcademy    = shadowForm === "rider";
-  const canSaberGated = shadowForm === "saber";
+  const shadowForm = character?.shadowForm ?? null;
+  const canAcademy    = shadowForm === "rider"    || shadowForm === "assassin";
+  const canCommitLog  = shadowForm === "lancer"   || shadowForm === "assassin";
+  const canGuilds     = shadowForm === "caster"   || shadowForm === "assassin";
 
   async function logout() {
     setLoggingOut(true);
@@ -31,17 +32,27 @@ export function Navbar() {
         </Link>
         <div className="hidden md:flex items-center gap-4 text-xs font-mono text-gray-500">
           <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>
-          <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
+          {/* Guilds — Caster / Assassin */}
+          {canGuilds ? (
+            <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
+          ) : (
+            <span
+              title="Requires Caster or Assassin form"
+              className="text-gray-800 cursor-not-allowed select-none"
+            >
+              Guilds
+            </span>
+          )}
           <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
 
-          {/* Commit Log — Saber only */}
-          {canSaberGated ? (
+          {/* Commit Log — Lancer / Assassin */}
+          {canCommitLog ? (
             <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">
               Commit Log
             </Link>
           ) : (
             <span
-              title="Requires Saber form"
+              title="Requires Lancer or Assassin form"
               className="text-gray-800 cursor-not-allowed select-none"
             >
               Commit Log

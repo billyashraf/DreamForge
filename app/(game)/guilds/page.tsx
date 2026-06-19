@@ -89,6 +89,28 @@ export default function GuildsPage() {
     setCreating(false);
   }
 
+  // Gate: Caster or Assassin form required
+  const shadowForm = character?.shadowForm ?? null;
+  if (user && character && shadowForm !== "caster" && shadowForm !== "assassin") {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
+        <div className="text-5xl text-purple-900">◈</div>
+        <div className="font-mono text-purple-500 text-lg font-bold tracking-widest uppercase">Guild Hall Locked</div>
+        <div className="font-mono text-gray-500 text-sm max-w-xs leading-relaxed">
+          Only the <span className="text-purple-400 font-bold">Caster</span> or{" "}
+          <span className="text-violet-400 font-bold">Assassin</span> form may enter the Guild Hall.
+          Arcane minds and shadow operatives govern these halls.
+        </div>
+        <button
+          onClick={() => router.push("/shadow-form")}
+          className="mt-2 px-6 py-2 border border-purple-900 text-purple-700 hover:text-purple-400 hover:border-purple-600 font-mono text-xs tracking-widest transition-colors"
+        >
+          SELECT SHADOW FORM →
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

@@ -104,15 +104,17 @@ export function MissionsPanel() {
 
   if (!character) return null;
 
-  // Gate: Saber form required
-  if (character.shadowForm !== "saber") {
+  // Gate: Saber or Assassin form required
+  const sf = character.shadowForm;
+  if (sf !== "saber" && sf !== "assassin") {
     return (
       <Card title="Missions" accent="green">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <div className="text-2xl text-amber-900">◈</div>
           <p className="text-xs font-mono text-gray-500 leading-relaxed max-w-xs">
             Missions are available only to the{" "}
-            <span className="text-amber-400 font-bold">Saber</span> form.
+            <span className="text-amber-400 font-bold">Saber</span> or{" "}
+            <span className="text-purple-400 font-bold">Assassin</span> form.
           </p>
           <a href="/shadow-form" className="text-[10px] font-mono text-amber-800 hover:text-amber-500 underline underline-offset-2 transition-colors">
             Select Shadow Form →
