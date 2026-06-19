@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 export default function RegisterPage() {
   const router = useRouter();
   const setUser = useGameStore((s) => s.setUser);
+  const setCharacter = useGameStore((s) => s.setCharacter);
 
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,6 +40,7 @@ export default function RegisterPage() {
       if (me.ok) {
         const meData = await me.json();
         setUser(meData.data.user);
+        setCharacter(meData.data.character); // null at this point, clears any stale state
       }
 
       router.push("/character/create");

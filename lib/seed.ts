@@ -5,6 +5,7 @@ import Item from "@/models/Item";
 import User from "@/models/User";
 import Character from "@/models/Character";
 import Guild from "@/models/Guild";
+import Team from "@/models/Team";
 
 const INITIAL_MISSIONS = [
   {
@@ -332,11 +333,13 @@ export const TEST_ACCOUNTS = [
       energy: 105,
       maxEnergy: 105,
       credits: 650,
+      merits: 200,
       strength: 7,
       intelligence: 6,
       agility: 6,
       skills: { combat: 2, scavenging: 1, survival: 1, strategy: 1, crafting: 1 },
-      currentLocation: "metapolis",
+      currentLocation: "metapolis" as const,
+      shadowForm: "saber",
     },
   },
   {
@@ -353,11 +356,13 @@ export const TEST_ACCOUNTS = [
       energy: 115,
       maxEnergy: 115,
       credits: 1800,
+      merits: 500,
       strength: 10,
       intelligence: 9,
       agility: 11,
       skills: { combat: 3, scavenging: 4, survival: 2, strategy: 2, crafting: 1 },
-      currentLocation: "moon_junkyard",
+      currentLocation: "moon_junkyard" as const,
+      shadowForm: "archer",
     },
   },
   {
@@ -374,11 +379,13 @@ export const TEST_ACCOUNTS = [
       energy: 125,
       maxEnergy: 125,
       credits: 3200,
+      merits: 900,
       strength: 13,
       intelligence: 10,
       agility: 14,
       skills: { combat: 4, scavenging: 3, survival: 5, strategy: 3, crafting: 2 },
-      currentLocation: "earth",
+      currentLocation: "earth" as const,
+      shadowForm: "rider",
     },
   },
   {
@@ -395,11 +402,13 @@ export const TEST_ACCOUNTS = [
       energy: 165,
       maxEnergy: 165,
       credits: 9500,
+      merits: 3200,
       strength: 18,
       intelligence: 16,
       agility: 17,
       skills: { combat: 7, scavenging: 6, survival: 8, strategy: 6, crafting: 4 },
-      currentLocation: "mars",
+      currentLocation: "mars" as const,
+      shadowForm: "caster",
     },
   },
   {
@@ -416,12 +425,57 @@ export const TEST_ACCOUNTS = [
       energy: 200,
       maxEnergy: 200,
       credits: 20000,
+      merits: 8000,
       strength: 20,
       intelligence: 25,
       agility: 18,
       skills: { combat: 9, scavenging: 7, survival: 8, strategy: 11, crafting: 6 },
-      currentLocation: "metapolis",
+      currentLocation: "metapolis" as const,
+      shadowForm: "assassin",
     },
+  },
+];
+
+const DUMMY_GUILDS = [
+  {
+    name: "Iron Vanguard",
+    tag: "IV",
+    description: "Elite scavengers and warriors. First to arrive, last to fall.",
+    level: 3,
+    credits: 4000,
+    marsRating: 850,
+  },
+  {
+    name: "Void Walkers",
+    tag: "VW",
+    description: "Arcane scholars who unravel the secrets of the cosmos. Knowledge is their weapon.",
+    level: 2,
+    credits: 2200,
+    marsRating: 620,
+  },
+  {
+    name: "Steel Brotherhood",
+    tag: "SB",
+    description: "The strongest blades on Mars. We don't negotiate. We dominate.",
+    level: 4,
+    credits: 6500,
+    marsRating: 1100,
+  },
+  {
+    name: "Shadow Compact",
+    tag: "SC",
+    description: "What you don't see is already behind you. Precision, silence, results.",
+    level: 2,
+    credits: 3100,
+    marsRating: 740,
+  },
+  {
+    name: "Red Horizon",
+    tag: "RH",
+    description: "Masters of Mars territory warfare. No sector is beyond our reach.",
+    level: 5,
+    credits: 9800,
+    marsRating: 1450,
   },
 ];
 
@@ -429,12 +483,12 @@ export async function seed() {
   await connectDB();
   console.log("Seeding database...");
 
-  // Missions — upsert by title+location so re-seeding updates existing docs (e.g. adds new reward fields)
+  // Missions — upsert by title+location so re-seeding updates existing docs
   await Mission.bulkWrite(
     INITIAL_MISSIONS.map((m) => ({
       updateOne: {
-        filter: { title: m.title, location: m.location as any },
-        update: { $set: m as any },
+        filter: { title: m.title, location: m.location as never },
+        update: { $set: m as never },
         upsert: true,
       },
     }))
@@ -448,21 +502,12 @@ export async function seed() {
     console.log(`Seeded ${INITIAL_ITEMS.length} items`);
   }
 
-  // Demo guild (Iron Vanguard)
-  let demoGuild = await Guild.findOne({ name: "Iron Vanguard" });
-
-  // Demo player account
+  // ── Demo player account ────────────────────────────────────────────────────
   const { email: pEmail, password: pPass, username: pUser } = DEMO_CREDENTIALS.player;
   let demoUser = await User.findOne({ email: pEmail });
   if (!demoUser) {
     const hash = await bcrypt.hash(pPass, 12);
-    demoUser = await User.create({
-      username: pUser,
-      email: pEmail,
-      passwordHash: hash,
-      role: "player",
-      isVerified: true,
-    });
+    demoUser = await User.create({ username: pUser, email: pEmail, passwordHash: hash, role: "player", isVerified: true });
     console.log("Created demo player account");
   }
 
@@ -473,52 +518,26 @@ export async function seed() {
       name: "Nova",
       level: 8,
       experience: 3200,
-      health: 180,
-      maxHealth: 180,
-      energy: 125,
-      maxEnergy: 125,
+      health: 180, maxHealth: 180,
+      energy: 125, maxEnergy: 125,
       credits: 2750,
-      strength: 14,
-      intelligence: 11,
-      agility: 12,
+      merits: 1200,
+      strength: 14, intelligence: 11, agility: 12,
       skills: { combat: 4, scavenging: 5, survival: 3, strategy: 2, crafting: 2 },
       currentLocation: "moon_junkyard",
+      shadowForm: "lancer",
     });
     console.log("Created demo player character: Nova");
+  } else if (!demoCharacter.shadowForm) {
+    await Character.findByIdAndUpdate(demoCharacter._id, { $set: { shadowForm: "lancer", merits: demoCharacter.merits ?? 1200 } });
   }
 
-  // Demo guild — needs character ID for leader
-  if (!demoGuild) {
-    demoGuild = await Guild.create({
-      name: "Iron Vanguard",
-      tag: "IV",
-      leaderId: demoCharacter._id,
-      members: [demoCharacter._id],
-      description: "Elite scavengers and warriors. First to arrive, last to fall.",
-      level: 3,
-      credits: 4000,
-      marsRating: 850,
-    });
-    console.log("Created demo guild: Iron Vanguard");
-  }
-  // Always ensure the character is linked to the guild (handles re-seed edge cases)
-  if (!demoCharacter.guildId || demoCharacter.guildId.toString() !== demoGuild._id.toString()) {
-    demoCharacter.guildId = demoGuild._id as never;
-    await demoCharacter.save();
-  }
-
-  // Demo admin account
+  // ── Demo admin account ─────────────────────────────────────────────────────
   const { email: aEmail, password: aPass, username: aUser } = DEMO_CREDENTIALS.admin;
   let adminUser = await User.findOne({ email: aEmail });
   if (!adminUser) {
     const hash = await bcrypt.hash(aPass, 12);
-    adminUser = await User.create({
-      username: aUser,
-      email: aEmail,
-      passwordHash: hash,
-      role: "admin",
-      isVerified: true,
-    });
+    adminUser = await User.create({ username: aUser, email: aEmail, passwordHash: hash, role: "admin", isVerified: true });
     console.log("Created demo admin account");
   }
 
@@ -529,22 +548,23 @@ export async function seed() {
       name: "Overseer",
       level: 20,
       experience: 48000,
-      health: 300,
-      maxHealth: 300,
-      energy: 200,
-      maxEnergy: 200,
+      health: 300, maxHealth: 300,
+      energy: 200, maxEnergy: 200,
       credits: 25000,
-      strength: 22,
-      intelligence: 28,
-      agility: 20,
+      merits: 9999,
+      strength: 22, intelligence: 28, agility: 20,
       skills: { combat: 10, scavenging: 8, survival: 9, strategy: 12, crafting: 7 },
       currentLocation: "mars",
-      guildId: demoGuild._id as never,
+      shadowForm: "assassin",
     });
     console.log("Created demo admin character: Overseer");
+  } else if (!adminCharacter.shadowForm) {
+    await Character.findByIdAndUpdate(adminCharacter._id, { $set: { shadowForm: "assassin", merits: adminCharacter.merits ?? 9999 } });
+    adminCharacter = await Character.findOne({ userId: adminUser._id });
   }
 
-  // Test accounts
+  // ── Test accounts ──────────────────────────────────────────────────────────
+  const testCharacters: (typeof adminCharacter)[] = [];
   for (const account of TEST_ACCOUNTS) {
     let testUser = await User.findOne({ email: account.email });
     if (!testUser) {
@@ -558,17 +578,112 @@ export async function seed() {
       });
       console.log(`Created test account: ${account.username}`);
     }
-    const testChar = await Character.findOne({ userId: testUser._id });
+    let testChar = await Character.findOne({ userId: testUser._id });
     if (!testChar) {
-      await Character.create({ userId: testUser._id, ...account.character });
+      testChar = await Character.create({ userId: testUser._id, ...account.character });
       console.log(`Created test character: ${account.character.name}`);
+    } else if (!testChar.shadowForm) {
+      await Character.findByIdAndUpdate(testChar._id, {
+        $set: { shadowForm: account.character.shadowForm, merits: testChar.merits ?? account.character.merits },
+      });
+      testChar = await Character.findOne({ userId: testUser._id });
+    }
+    testCharacters.push(testChar);
+  }
+
+  // ── Guilds ─────────────────────────────────────────────────────────────────
+  // Iron Vanguard — led by demo player
+  let demoGuild = await Guild.findOne({ name: "Iron Vanguard" });
+  if (!demoGuild) {
+    demoGuild = await Guild.create({
+      ...DUMMY_GUILDS[0],
+      leaderId: demoCharacter!._id,
+      members: [demoCharacter!._id],
+    });
+    console.log("Created guild: Iron Vanguard");
+  }
+  // Ensure demo character linked to guild
+  if (demoCharacter && (!demoCharacter.guildId || demoCharacter.guildId.toString() !== demoGuild._id.toString())) {
+    await Character.findByIdAndUpdate(demoCharacter._id, { $set: { guildId: demoGuild._id } });
+  }
+  // Ensure admin character linked to guild
+  if (adminCharacter && !adminCharacter.guildId) {
+    await Character.findByIdAndUpdate(adminCharacter._id, { $set: { guildId: demoGuild._id } });
+    await Guild.findByIdAndUpdate(demoGuild._id, { $addToSet: { members: adminCharacter._id } });
+  }
+
+  // Remaining dummy guilds — led by test characters if available
+  const guildLeaders = [
+    testCharacters[4], // Cassius (assassin) → Shadow Compact
+    testCharacters[3], // Zara (caster)     → Steel Brotherhood
+    testCharacters[2], // Kade (rider)       → Void Walkers
+    testCharacters[3], // Zara               → Red Horizon
+  ];
+  for (let i = 1; i < DUMMY_GUILDS.length; i++) {
+    const gData = DUMMY_GUILDS[i];
+    const existing = await Guild.findOne({ name: gData.name });
+    if (!existing) {
+      const leader = guildLeaders[i - 1] ?? demoCharacter!;
+      await Guild.create({ ...gData, leaderId: leader._id, members: [leader._id] });
+      console.log(`Created guild: ${gData.name}`);
+    }
+  }
+
+  // ── Teams ──────────────────────────────────────────────────────────────────
+  const DUMMY_TEAMS = [
+    {
+      name: "Dome Patrol Unit",
+      activity: "metapolis patrol",
+      leader: testCharacters[0] ?? demoCharacter!, // Rex (saber)
+      members: [testCharacters[0] ?? demoCharacter!],
+    },
+    {
+      name: "Junkyard Wolves",
+      activity: "junkyard scavenging",
+      leader: testCharacters[1] ?? demoCharacter!, // Lyra (archer)
+      members: [testCharacters[1] ?? demoCharacter!, demoCharacter!],
+    },
+    {
+      name: "Earth Reclamation",
+      activity: "earth exploration",
+      leader: testCharacters[2] ?? demoCharacter!, // Kade (rider)
+      members: [testCharacters[2] ?? demoCharacter!],
+    },
+    {
+      name: "Mars Vanguard",
+      activity: "mars territory",
+      leader: testCharacters[3] ?? adminCharacter!, // Zara (caster)
+      members: [testCharacters[3] ?? adminCharacter!, adminCharacter!],
+    },
+  ];
+
+  for (const t of DUMMY_TEAMS) {
+    const existing = await Team.findOne({ name: t.name });
+    if (!existing) {
+      const team = await Team.create({
+        name: t.name,
+        leaderId: t.leader._id,
+        members: t.members.filter(Boolean).map((c) => c!._id),
+        activity: t.activity,
+        maxSize: 4,
+        isOpen: true,
+      });
+      // Link team to leader character
+      await Character.findByIdAndUpdate(t.leader._id, { $set: { teamId: team._id } });
+      console.log(`Created team: ${t.name}`);
     }
   }
 
   console.log("Seed complete.");
   return {
     demoCreds: DEMO_CREDENTIALS,
-    testAccounts: TEST_ACCOUNTS.map((a) => ({ username: a.username, email: a.email, password: a.password, role: a.role })),
+    testAccounts: TEST_ACCOUNTS.map((a) => ({
+      username: a.username,
+      email: a.email,
+      password: a.password,
+      role: a.role,
+      shadowForm: a.character.shadowForm,
+    })),
     guild: { name: demoGuild?.name, tag: demoGuild?.tag },
   };
 }
