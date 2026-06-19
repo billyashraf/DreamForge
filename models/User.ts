@@ -4,6 +4,7 @@ export interface IUser extends Document {
   username: string;
   email: string;
   passwordHash: string;
+  googleId?: string;
   role: "player" | "moderator" | "admin";
   isVerified: boolean;
   isBanned: boolean;
@@ -16,7 +17,8 @@ const UserSchema = new Schema<IUser>(
   {
     username: { type: String, required: true, unique: true, trim: true, minlength: 3, maxlength: 20 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, default: "" },
+    googleId: { type: String, sparse: true, unique: true },
     role: { type: String, enum: ["player", "moderator", "admin"], default: "player" },
     isVerified: { type: Boolean, default: false },
     isBanned: { type: Boolean, default: false },

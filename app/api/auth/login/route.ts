@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
     return err(`Account suspended. Reason: ${user.banReason ?? "Policy violation"}`, 403);
   }
 
+  if (!user.passwordHash) {
+    return err("This account was created with Google sign-in. Use the 'Sign in with Google' button.", 400);
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return err("Invalid email or password", 401);
 
