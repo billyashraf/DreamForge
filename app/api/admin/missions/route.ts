@@ -57,6 +57,25 @@ export async function PUT(req: NextRequest) {
   return ok({ message: "Mission updated", mission });
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) return unauthorized();
+
+  const body = await req.json().catch(() => null);
+  if (!body?.id) return err("Mission id is required");
+
+  await connectDB();
+
+  const mission = await Mission.findByIdAndUpdate(
+    body.id,
+    { isActive: !!body.isActive },
+    { new: true }
+  );
+  if (!mission) return err("Mission not found", 404);
+
+  return ok({ message: mission.isActive ? "Mission reactivated" : "Mission deactivated" });
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return unauthorized();

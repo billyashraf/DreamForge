@@ -53,6 +53,7 @@ export const missionSchema = z.object({
   rewards: z.object({
     experience: z.number().int().min(0),
     credits: z.number().int().min(0),
+    merits: z.number().int().min(0).optional().default(0),
   }),
   requirements: z
     .object({

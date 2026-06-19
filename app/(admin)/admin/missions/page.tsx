@@ -14,7 +14,7 @@ interface Mission {
   difficulty: string;
   type: string;
   isActive: boolean;
-  rewards: { experience: number; credits: number };
+  rewards: { experience: number; credits: number; merits: number };
   requirements: { level?: number };
   durationMinutes: number;
 }
@@ -29,7 +29,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 const BLANK_FORM = {
   title: "", location: "metapolis", description: "", narrative: "",
   difficulty: "easy", type: "solo",
-  rewards: { experience: 50, credits: 100 },
+  rewards: { experience: 50, credits: 100, merits: 0 },
   requirements: { level: 1 },
   durationMinutes: 10,
 };
@@ -92,9 +92,17 @@ export default function AdminMissionsPage() {
     setSaving(false);
   }
 
-  async function toggleMission(id: string, isActive: boolean) {
-    if (!isActive) return;
-    const res = await fetch(`/api/admin/missions?id=${id}`, { method: "DELETE" });
+  async function toggleMission(id: string, currentlyActive: boolean) {
+    let res: Response;
+    if (currentlyActive) {
+      res = await fetch(`/api/admin/missions?id=${id}`, { method: "DELETE" });
+    } else {
+      res = await fetch("/api/admin/missions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isActive: true }),
+      });
+    }
     const data = await res.json();
     setStatusMsg(res.ok ? data.data.message : `ERROR: ${data.error}`);
     if (res.ok) fetchMissions();
@@ -144,10 +152,11 @@ export default function AdminMissionsPage() {
             </div>
             <Input label="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required />
             <Input label="Narrative (shown on completion)" value={form.narrative} onChange={(e) => setForm((f) => ({ ...f, narrative: e.target.value }))} />
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="XP Reward" type="number" value={form.rewards.experience} onChange={(e) => setForm((f) => ({ ...f, rewards: { ...f.rewards, experience: parseInt(e.target.value) } }))} />
-              <Input label="Credits Reward" type="number" value={form.rewards.credits} onChange={(e) => setForm((f) => ({ ...f, rewards: { ...f.rewards, credits: parseInt(e.target.value) } }))} />
-              <Input label="Level Req" type="number" value={form.requirements.level ?? 1} onChange={(e) => setForm((f) => ({ ...f, requirements: { ...f.requirements, level: parseInt(e.target.value) } }))} />
+            <div className="grid grid-cols-4 gap-3">
+              <Input label="XP Reward" type="number" value={form.rewards.experience} onChange={(e) => setForm((f) => ({ ...f, rewards: { ...f.rewards, experience: parseInt(e.target.value) || 0 } }))} />
+              <Input label="Credits Reward" type="number" value={form.rewards.credits} onChange={(e) => setForm((f) => ({ ...f, rewards: { ...f.rewards, credits: parseInt(e.target.value) || 0 } }))} />
+              <Input label="Merits Reward" type="number" value={form.rewards.merits} onChange={(e) => setForm((f) => ({ ...f, rewards: { ...f.rewards, merits: parseInt(e.target.value) || 0 } }))} />
+              <Input label="Level Req" type="number" value={form.requirements.level ?? 1} onChange={(e) => setForm((f) => ({ ...f, requirements: { ...f.requirements, level: parseInt(e.target.value) || 1 } }))} />
             </div>
             {formError && <p className="text-xs font-mono text-red-400">ERROR: {formError}</p>}
             <Button type="submit" loading={saving}>Create Mission</Button>
@@ -182,14 +191,23 @@ export default function AdminMissionsPage() {
                     <td className="py-2 pr-4 text-gray-500">
                       <span className="text-yellow-400">+{m.rewards.experience}xp</span>{" "}
                       <span className="text-cyan-400">+{m.rewards.credits}¢</span>
+                      {m.rewards.merits > 0 && (
+                        <><br /><span className="text-purple-400">+{m.rewards.merits}M</span></>
+                      )}
                     </td>
                     <td className="py-2 pr-4">
-                      {m.isActive ? <span className="text-green-400">ACTIVE</span> : <span className="text-red-600">INACTIVE</span>}
+                      {m.isActive
+                        ? <span className="text-green-400">ACTIVE</span>
+                        : <span className="text-red-600">INACTIVE</span>}
                     </td>
                     <td className="py-2">
-                      {m.isActive && (
-                        <Button size="sm" variant="danger" onClick={() => toggleMission(m._id, m.isActive)}>
+                      {m.isActive ? (
+                        <Button size="sm" variant="danger" onClick={() => toggleMission(m._id, true)}>
                           Deactivate
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="success" onClick={() => toggleMission(m._id, false)}>
+                          Reactivate
                         </Button>
                       )}
                     </td>
