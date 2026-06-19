@@ -84,6 +84,43 @@ Each form unlocks specific content. Choose your form at /shadow-form.
 
 ---
 
+## Google Authentication Setup
+
+Google sign-in is built in but requires credentials from Google Cloud Console.
+
+### 1. Create OAuth credentials
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. Select or create a project
+3. Navigate to **APIs & Services → Credentials**
+4. Click **Create Credentials → OAuth 2.0 Client ID**
+5. Application type: **Web application**
+6. Add Authorized redirect URIs:
+   - `http://localhost:3000/api/auth/google/callback` (local dev)
+   - `https://your-domain.com/api/auth/google/callback` (production)
+7. Click **Create** — copy the **Client ID** and **Client Secret**
+
+### 2. Add to .env.local
+
+```env
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
+```
+
+### 3. How it works
+
+- The **Sign in with Google** button on the login page navigates to `GET /api/auth/google`
+- Google redirects back to `GET /api/auth/google/callback` with an auth code
+- The server exchanges the code for an access token, fetches the Google user profile, then:
+  - **Existing account with same email** — links the Google ID and logs in
+  - **Returning Google user** — logs in directly
+  - **New user** — creates an account (username derived from Google display name) and redirects to character creation
+- A standard JWT session cookie is issued — same auth system as email/password login
+
+> If `GOOGLE_CLIENT_ID` is not set, the button still appears but shows a "not configured" error on click — no crash.
+
+---
+
 ## API Routes
 
 | Method | Route | Description |
