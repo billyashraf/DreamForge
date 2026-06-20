@@ -223,7 +223,14 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | GET | /api/market | List consumable items for sale with prices |
 | POST | /api/market/buy | Buy an item — deducts credits, adds to inventory |
 | GET/POST | /api/guilds | List guilds / create guild |
-| POST | /api/guilds/join | Join a guild |
+| POST | /api/guilds/join | Join a guild (multi-guild supported) |
+| GET | /api/guilds/mine | Get guilds the current character belongs to |
+| GET | /api/characters | Search characters by name (for owl compose) |
+| GET | /api/profile/[characterId] | Public character profile + viewer owl status |
+| POST | /api/owl/send | Dispatch shadow owl (10-min delivery, one owl at a time) |
+| GET | /api/owl/inbox | Inbox of delivered messages + sent messages |
+| GET/POST | /api/chat/team | Team telepathy live chat |
+| GET/POST | /api/chat/guild | Guild echo live chat |
 | GET/POST | /api/teams | List teams / create team |
 | GET | /api/curse-tree | Get curse tree data |
 | POST | /api/curse-tree | Upgrade/boost curse skill |
@@ -237,6 +244,50 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | GET/POST/PUT/DELETE | /api/admin/missions | Manage missions (admin/mod only) |
 
 ---
+
+## Social Systems
+
+### Character Profiles
+
+Every character has a public profile page at `/profile/[characterId]` showing level, shadow form, location, stats (STR/INT/AGI), guild memberships, and team. Character names in the CharacterPanel and chat windows are clickable links to this page.
+
+### Shadow Owl (Async Messaging)
+
+Players communicate via the **Shadow Owl** — a bird courier that delivers messages after a **10-minute flight time**. Each player owns exactly one owl, so only one message can be in flight at a time.
+
+- Compose and send from the **OwlInbox** panel on the dashboard or from a **Character Profile** page
+- Recipient search: type 2+ characters of a name to get a live dropdown
+- Inbox shows delivered messages; Sent shows in-flight status with live countdown
+- Owl availability shown with real-time countdown in both the OwlInbox and the profile page
+
+API: `POST /api/owl/send { toCharacterId, content }` · `GET /api/owl/inbox`
+
+### Team Telepathy (Live Chat)
+
+Characters in a team can send **live telepathic messages** visible to all team members.
+
+- Rate limited: **1 message per minute** per character
+- Auto-scrolls to newest messages
+- Polls every **5 seconds** for new messages
+- Messages expire automatically after **24 hours**
+- Dead characters cannot send messages
+- Shown in the dashboard right column (only visible if in a team)
+
+API: `GET /api/chat/team` · `POST /api/chat/team { content }`
+
+### Guild Echo (Live Chat)
+
+Same as Team Telepathy but scoped to a guild. If a character belongs to **multiple guilds**, a tab row appears to switch between guild echo channels.
+
+- Rate limited: **1 message per minute** across all guilds
+- 24-hour message TTL
+- Shown in the dashboard right column (only visible if in at least one guild)
+
+API: `GET /api/chat/guild?guildId=xxx` · `POST /api/chat/guild { content, guildId }`
+
+### Multiple Guild Membership
+
+Characters can now join **any number of guilds** simultaneously. The Join button stays active for guilds you haven't joined yet; a [MEMBER] badge shows for each guild you've already joined. Primary `guildId` (the first guild joined) is preserved for backward compatibility.
 
 ## Stack
 

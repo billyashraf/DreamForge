@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useGameStore } from "@/store/useGameStore";
 import { Card } from "@/components/ui/Card";
 import { StatBar } from "@/components/ui/StatBar";
@@ -91,7 +92,12 @@ export function CharacterPanel() {
       <div className="space-y-3">
         <div>
           <div className="flex items-baseline justify-between">
-            <span className="text-lg font-mono font-bold text-cyan-400">{character.name}</span>
+            <Link
+            href={`/profile/${character.id}`}
+            className="text-lg font-mono font-bold text-cyan-400 hover:underline"
+          >
+            {character.name}
+          </Link>
             <span className="text-xs font-mono text-gray-500">LVL {character.level}</span>
           </div>
           <div className="text-xs font-mono text-gray-600 mt-0.5">

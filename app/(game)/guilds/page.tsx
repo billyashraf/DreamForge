@@ -60,7 +60,11 @@ export default function GuildsPage() {
     const data = await res.json();
     if (res.ok) {
       addLog(data.data.message, "success");
-      setCharacter({ ...character!, guildId });
+      setCharacter({
+        ...character!,
+        guildId: data.data.guildId,
+        guildIds: data.data.guildIds,
+      });
       fetchGuilds();
     } else {
       addLog(data.error, "error");
@@ -159,7 +163,7 @@ export default function GuildsPage() {
                   <span>Mars Rating: <span className="text-red-400">{g.marsRating}</span></span>
                 </div>
               </div>
-              {character && !character.guildId && (
+              {character && !(character.guildIds ?? []).includes(g._id) && (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -169,7 +173,7 @@ export default function GuildsPage() {
                   Join
                 </Button>
               )}
-              {character?.guildId === g._id && (
+              {(character?.guildIds ?? []).includes(g._id) && (
                 <span className="text-xs font-mono text-cyan-500">[MEMBER]</span>
               )}
             </div>

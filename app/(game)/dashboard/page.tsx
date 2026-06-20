@@ -10,6 +10,9 @@ import { GameLog } from "@/components/game/GameLog";
 import { InventoryPanel } from "@/components/game/InventoryPanel";
 import { MarketPanel } from "@/components/game/MarketPanel";
 import { DeathScreen } from "@/components/game/DeathScreen";
+import { OwlInbox } from "@/components/game/OwlInbox";
+import { TeamChat } from "@/components/game/TeamChat";
+import { GuildChat } from "@/components/game/GuildChat";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -102,11 +105,14 @@ export default function DashboardPage() {
           <TravelPanel />
           <InventoryPanel />
           <MarketPanel />
+          <OwlInbox />
         </div>
 
         <div className="lg:col-span-2 space-y-4">
           <MissionsPanel />
           <GameLog />
+          <TeamChat />
+          <GuildChat />
         </div>
       </div>
     </div>

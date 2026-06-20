@@ -1,4 +1,4 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
 
-  if (character.guildId) return err("You are already in a guild");
+  // Prevent joining the same guild twice
+  const alreadyIn = character.guildIds?.some((id) => id.toString() === body.guildId);
+  if (alreadyIn) return err("Already a member of this guild");
 
   const guild = await Guild.findById(body.guildId);
   if (!guild) return err("Guild not found", 404);
@@ -25,8 +27,13 @@ export async function POST(req: NextRequest) {
   guild.members.push(character._id as never);
   await guild.save();
 
-  character.guildId = guild._id as never;
+  character.guildIds = [...(character.guildIds ?? []), guild._id as never];
+  if (!character.guildId) character.guildId = guild._id as never;
   await character.save();
 
-  return ok({ message: `You joined [${guild.tag}] ${guild.name}!` });
+  return ok({
+    message: `You joined [${guild.tag}] ${guild.name}!`,
+    guildId: guild._id.toString(),
+    guildIds: character.guildIds.map((id) => id.toString()),
+  });
 }

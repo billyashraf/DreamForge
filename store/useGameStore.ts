@@ -39,6 +39,8 @@ interface CharacterState {
   };
   currentLocation: string;
   guildId?: string | null;
+  guildIds?: string[];
+  owlReturnAt?: string | null;
   teamId?: string | null;
   lastEnergyRegen?: string | null;
   lastHealthRegen?: string | null;
