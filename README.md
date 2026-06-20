@@ -172,6 +172,18 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | 38% | **−50% HP** — current HP halved (min 1). |
 | 30% | **Double HP** — current HP doubled, capped at max HP. |
 
+### HP Regeneration
+
+Characters naturally regenerate **+2 HP per minute** when not poisoned and not dead, up to `maxHealth`. The rate is tracked via `lastHealthRegen` (same lazy-evaluation pattern as energy regen — damage is accumulated and applied on the next server request).
+
+HP regen is **suspended while poisoned** — poison and regen cancel each other out naturally; poison wins completely at 15 HP/sec.
+
+The Character Panel shows:
+- `+2 HP/min` sub-label below the HP bar when regenerating
+- `full in Xm` estimated time to full health
+- `full` when at max HP
+- The sub-label is hidden while poisoned (HP is draining, not regenerating)
+
 ### Real-Time Updates
 
 The dashboard polls `/api/auth/me` every **10 seconds** so HP, energy, and character state stay in sync with the server (which applies lazy poison damage and energy regen on each request).

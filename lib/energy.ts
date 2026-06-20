@@ -1,6 +1,7 @@
 import type { ICharacter } from "@/models/Character";
 
 export const ENERGY_REGEN_RATE = 2; // energy per minute — full regen takes 50-150 min depending on maxEnergy
+export const HEALTH_REGEN_RATE = 2; // HP per minute — blocked while poisoned or dead
 
 export const MISSION_ENERGY_COST: Record<string, number> = {
   easy: 5,
@@ -19,6 +20,23 @@ export async function applyEnergyRegen(character: ICharacter): Promise<void> {
 
   character.energy = Math.min(character.energy + gained, character.maxEnergy);
   character.lastEnergyRegen = now;
+  await character.save();
+}
+
+export async function applyHealthRegen(character: ICharacter): Promise<void> {
+  if (character.isDead) return;
+  if (character.poisonedUntil && character.poisonedUntil > new Date()) return;
+  if (character.health >= character.maxHealth) return;
+
+  const now = new Date();
+  const last = (character.lastHealthRegen ?? character.createdAt ?? now) as Date;
+  const minutesElapsed = (now.getTime() - last.getTime()) / 60_000;
+  const gained = Math.floor(minutesElapsed * HEALTH_REGEN_RATE);
+
+  if (gained === 0) return;
+
+  character.health = Math.min(character.health + gained, character.maxHealth);
+  character.lastHealthRegen = now;
   await character.save();
 }
 

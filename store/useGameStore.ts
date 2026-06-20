@@ -41,6 +41,7 @@ interface CharacterState {
   guildId?: string | null;
   teamId?: string | null;
   lastEnergyRegen?: string | null;
+  lastHealthRegen?: string | null;
   pain?: number;
   maxPain?: number;
   madness?: number;

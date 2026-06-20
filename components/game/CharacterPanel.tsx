@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { Card } from "@/components/ui/Card";
 import { StatBar } from "@/components/ui/StatBar";
+import { HEALTH_REGEN_RATE } from "@/lib/energy";
 
 const LOCATION_LABELS: Record<string, string> = {
   metapolis: "Metapolis, Moon",
@@ -13,7 +14,7 @@ const LOCATION_LABELS: Record<string, string> = {
 };
 
 const XP_TO_LEVEL  = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
-const REGEN_RATE   = 2;   // must match lib/energy.ts
+const REGEN_RATE   = 2;   // must match lib/energy.ts ENERGY_REGEN_RATE
 const PAIN_MINUTES = 45;  // minutes for pain to fully recede
 
 export function CharacterPanel() {
@@ -59,7 +60,21 @@ export function CharacterPanel() {
   const lastTick        = character.lastPoisonTick ? new Date(character.lastPoisonTick).getTime() : now;
   const effectiveNow    = poisonActive ? Math.min(now, poisonedUntil) : now;
   const pendingPoison   = poisonActive ? Math.floor((effectiveNow - lastTick) / 1_000) * 15 : 0;
-  const displayHp       = Math.max(0, character.health - pendingPoison);
+
+  // Optimistic HP regen (only when not poisoned, not dead, not full)
+  const lastHpRegen     = character.lastHealthRegen ? new Date(character.lastHealthRegen).getTime() : now;
+  const hpRegenMinutes  = (now - lastHpRegen) / 60_000;
+  const pendingHpRegen  = (!poisonActive && !character.isDead && character.health < character.maxHealth)
+    ? Math.floor(hpRegenMinutes * HEALTH_REGEN_RATE)
+    : 0;
+
+  const displayHp = poisonActive
+    ? Math.max(0, character.health - pendingPoison)
+    : Math.min(character.health + pendingHpRegen, character.maxHealth);
+
+  const minutesToFullHp = displayHp < character.maxHealth && !poisonActive
+    ? Math.ceil((character.maxHealth - displayHp) / HEALTH_REGEN_RATE)
+    : 0;
 
   // Optimistic pain regen estimate
   const maxPain        = character.maxPain ?? 100;
@@ -85,14 +100,26 @@ export function CharacterPanel() {
         </div>
 
         <div className="space-y-2 pt-1">
-          {/* HP — flashes green when poisoned */}
-          <StatBar
-            label="HP"
-            value={displayHp}
-            max={character.maxHealth}
-            color="red"
-            flash={poisonActive}
-          />
+          {/* HP — flashes green when poisoned; shows regen when healthy */}
+          <div className="space-y-0.5">
+            <StatBar
+              label="HP"
+              value={displayHp}
+              max={character.maxHealth}
+              color="red"
+              flash={poisonActive}
+            />
+            {!poisonActive && !character.isDead && (
+              <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
+                <span>+{HEALTH_REGEN_RATE} HP/min</span>
+                <span>
+                  {displayHp >= character.maxHealth
+                    ? "full"
+                    : `full in ${minutesToFullHp}m`}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="space-y-0.5">
             <StatBar label="EN" value={displayEnergy} max={character.maxEnergy} color="green" />
             <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">

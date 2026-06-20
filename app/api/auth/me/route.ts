@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, unauthorized } from "@/lib/response";
-import { applyEnergyRegen, applyMadnessRegen, applyPoisonDamage } from "@/lib/energy";
+import { applyEnergyRegen, applyHealthRegen, applyMadnessRegen, applyPoisonDamage } from "@/lib/energy";
 import User from "@/models/User";
 import Character from "@/models/Character";
 
@@ -15,13 +15,14 @@ export async function GET() {
   if (!user) return unauthorized();
 
   const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm merits pain maxPain madness lastPainUpdate lastMadnessUpdate isDead poisonedUntil lastPoisonTick"
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen lastHealthRegen shadowForm merits pain maxPain madness lastPainUpdate lastMadnessUpdate isDead poisonedUntil lastPoisonTick"
   );
 
   if (character) {
     applyMadnessRegen(character);
     applyPoisonDamage(character);
     await applyEnergyRegen(character);
+    await applyHealthRegen(character);
     await character.save();
   }
 

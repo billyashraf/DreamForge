@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
-import { applyEnergyRegen, applyMadnessRegen, applyPainRegen, applyPoisonDamage, MISSION_ENERGY_COST } from "@/lib/energy";
+import { applyEnergyRegen, applyHealthRegen, applyMadnessRegen, applyPainRegen, applyPoisonDamage, MISSION_ENERGY_COST } from "@/lib/energy";
 import Mission from "@/models/Mission";
 import Character from "@/models/Character";
 
@@ -102,8 +102,9 @@ function charSnapshot(character: InstanceType<typeof Character>) {
     isDead:          character.isDead,
     poisonedUntil:   character.poisonedUntil,
     lastPoisonTick:  character.lastPoisonTick,
-    lastPainUpdate:  character.lastPainUpdate,
-    lastEnergyRegen: character.lastEnergyRegen,
+    lastPainUpdate:   character.lastPainUpdate,
+    lastEnergyRegen:  character.lastEnergyRegen,
+    lastHealthRegen:  character.lastHealthRegen,
   };
 }
 
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
   applyMadnessRegen(character);
   const poisonDamage = applyPoisonDamage(character);
   await applyEnergyRegen(character);
+  await applyHealthRegen(character);
 
   // Poison may have killed the character — surface it as a death response
   if (character.isDead && poisonDamage > 0) {
