@@ -148,7 +148,7 @@ export default function AdminMissionsPage() {
                   {["solo", "team", "guild"].map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <Input label="Duration (min)" type="number" value={form.durationMinutes} onChange={(e) => setForm((f) => ({ ...f, durationMinutes: parseInt(e.target.value) }))} />
+              <Input label="Duration (min)" type="number" value={form.durationMinutes} onChange={(e) => setForm((f) => ({ ...f, durationMinutes: parseInt(e.target.value) || 1 }))} />
             </div>
             <Input label="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} required />
             <Input label="Narrative (shown on completion)" value={form.narrative} onChange={(e) => setForm((f) => ({ ...f, narrative: e.target.value }))} />

@@ -8,10 +8,20 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, className = "", id, ...props },
+  { label, error, className = "", id, value, ...props },
   ref
 ) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+
+  // Normalise value so the input is always controlled:
+  // undefined, null, and NaN all become "" to prevent the
+  // "uncontrolled → controlled" React warning.
+  const safeValue =
+    value === undefined || value === null
+      ? ""
+      : typeof value === "number" && Number.isNaN(value)
+      ? ""
+      : value;
 
   return (
     <div className="flex flex-col gap-1">
@@ -23,6 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         id={inputId}
+        value={safeValue}
         className={`
           w-full bg-gray-900 border font-mono text-sm text-gray-100
           px-3 py-2 focus:outline-none focus:ring-1 focus:ring-cyan-500
