@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
-import { applyEnergyRegen, MISSION_ENERGY_COST, ENERGY_REGEN_RATE } from "@/lib/energy";
+import { applyEnergyRegen, applyMadnessRegen, MISSION_ENERGY_COST, ENERGY_REGEN_RATE } from "@/lib/energy";
 import Mission from "@/models/Mission";
 import Character from "@/models/Character";
 
@@ -14,6 +14,7 @@ export async function GET() {
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
 
+  applyMadnessRegen(character);
   await applyEnergyRegen(character);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

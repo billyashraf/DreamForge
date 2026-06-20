@@ -22,6 +22,19 @@ export async function applyEnergyRegen(character: ICharacter): Promise<void> {
   await character.save();
 }
 
+// Madness decreases by 1 per day, minimum 0
+export function applyMadnessRegen(character: ICharacter): void {
+  if (!character.madness || character.madness <= 0) return;
+  const now = new Date();
+  const last = (character.lastMadnessUpdate ?? character.createdAt ?? now) as Date;
+  const daysElapsed = (now.getTime() - last.getTime()) / 86_400_000;
+  const reduction = Math.floor(daysElapsed);
+  if (reduction <= 0) return;
+  character.madness = Math.max(0, character.madness - reduction);
+  // Advance by exactly `reduction` days so sub-day remainder is preserved
+  character.lastMadnessUpdate = new Date(last.getTime() + reduction * 86_400_000);
+}
+
 // Pain recedes to 0 over 45 minutes — called before any pain calculation
 export function applyPainRegen(character: ICharacter): void {
   const now = new Date();

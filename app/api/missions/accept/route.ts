@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
-import { applyEnergyRegen, applyPainRegen, MISSION_ENERGY_COST } from "@/lib/energy";
+import { applyEnergyRegen, applyMadnessRegen, applyPainRegen, MISSION_ENERGY_COST } from "@/lib/energy";
 import Mission from "@/models/Mission";
 import Character from "@/models/Character";
 
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
 
+  applyMadnessRegen(character);
   await applyEnergyRegen(character);
 
   const mission = await Mission.findById(body.missionId);
