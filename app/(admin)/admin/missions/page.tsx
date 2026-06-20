@@ -11,6 +11,8 @@ interface Mission {
   _id: string;
   title: string;
   location: string;
+  description: string;
+  narrative: string;
   difficulty: string;
   type: string;
   isActive: boolean;
@@ -40,6 +42,7 @@ export default function AdminMissionsPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<typeof BLANK_FORM>(BLANK_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -71,20 +74,47 @@ export default function AdminMissionsPage() {
 
   useEffect(() => { if (user && user.role !== "player") fetchMissions(); }, [user, fetchMissions]);
 
-  async function createMission(e: React.FormEvent) {
+  function startEdit(m: Mission) {
+    setEditingId(m._id);
+    setForm({
+      title: m.title,
+      location: m.location,
+      description: m.description,
+      narrative: m.narrative,
+      difficulty: m.difficulty,
+      type: m.type,
+      rewards: { ...m.rewards },
+      requirements: { level: m.requirements.level ?? 1 },
+      durationMinutes: m.durationMinutes,
+    });
+    setFormError("");
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(BLANK_FORM);
+    setFormError("");
+  }
+
+  async function submitForm(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
     setSaving(true);
+    const [method, body] = editingId
+      ? ["PUT", JSON.stringify({ id: editingId, ...form })]
+      : ["POST", JSON.stringify(form)];
     const res = await fetch("/api/admin/missions", {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body,
     });
     const data = await res.json();
     if (res.ok) {
-      setStatusMsg("Mission created successfully");
-      setShowForm(false);
-      setForm(BLANK_FORM);
+      setStatusMsg(editingId ? "Mission updated successfully" : "Mission created successfully");
+      cancelForm();
       fetchMissions();
     } else {
       setFormError(data.error);
@@ -112,7 +142,7 @@ export default function AdminMissionsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-mono font-bold text-red-400">Mission Management</h1>
-        <Button variant="secondary" onClick={() => setShowForm(!showForm)}>
+        <Button variant="secondary" onClick={() => showForm ? cancelForm() : setShowForm(true)}>
           {showForm ? "Cancel" : "+ New Mission"}
         </Button>
       </div>
@@ -124,8 +154,8 @@ export default function AdminMissionsPage() {
       )}
 
       {showForm && (
-        <Card title="Create Mission" accent="red">
-          <form onSubmit={createMission} className="space-y-3">
+        <Card title={editingId ? "Edit Mission" : "Create Mission"} accent="red">
+          <form onSubmit={submitForm} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Input label="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
               <div className="flex flex-col gap-1">
@@ -159,7 +189,7 @@ export default function AdminMissionsPage() {
               <Input label="Level Req" type="number" value={form.requirements.level ?? 1} onChange={(e) => setForm((f) => ({ ...f, requirements: { ...f.requirements, level: parseInt(e.target.value) || 1 } }))} />
             </div>
             {formError && <p className="text-xs font-mono text-red-400">ERROR: {formError}</p>}
-            <Button type="submit" loading={saving}>Create Mission</Button>
+            <Button type="submit" loading={saving}>{editingId ? "Save Changes" : "Create Mission"}</Button>
           </form>
         </Card>
       )}
@@ -201,15 +231,20 @@ export default function AdminMissionsPage() {
                         : <span className="text-red-600">INACTIVE</span>}
                     </td>
                     <td className="py-2">
-                      {m.isActive ? (
-                        <Button size="sm" variant="danger" onClick={() => toggleMission(m._id, true)}>
-                          Deactivate
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => startEdit(m)}>
+                          Edit
                         </Button>
-                      ) : (
-                        <Button size="sm" variant="success" onClick={() => toggleMission(m._id, false)}>
-                          Reactivate
-                        </Button>
-                      )}
+                        {m.isActive ? (
+                          <Button size="sm" variant="danger" onClick={() => toggleMission(m._id, true)}>
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="success" onClick={() => toggleMission(m._id, false)}>
+                            Reactivate
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
