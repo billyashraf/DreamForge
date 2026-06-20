@@ -76,11 +76,17 @@ export function InventoryPanel() {
     setCooldowns(data.data.itemCooldowns ?? []);
   }, []);
 
-  // Fetch on mount — this component is only rendered when character is set
+  // Fetch on mount — component only renders when character is set
   useEffect(() => {
     fetchInventory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-fetch every 30s so item counts stay in sync (e.g. after seeding)
+  useEffect(() => {
+    const id = setInterval(fetchInventory, 30_000);
+    return () => clearInterval(id);
+  }, [fetchInventory]);
 
   async function useItem(item: InvItem) {
     if (using) return;

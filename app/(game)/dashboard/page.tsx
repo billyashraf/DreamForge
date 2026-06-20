@@ -35,6 +35,20 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Poll every 10s — applies server-side poison ticks and syncs actual HP
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(async () => {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.data.character) setCharacter(data.data.character);
+    }, 10_000);
+    return () => clearInterval(id);
+  // setCharacter is a stable Zustand action
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   if (!user || !character) {
     return (
       <div className="flex items-center justify-center h-64">

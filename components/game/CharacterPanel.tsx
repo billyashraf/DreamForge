@@ -21,8 +21,9 @@ export function CharacterPanel() {
   const user = useGameStore((s) => s.user);
   const [now, setNow] = useState(() => Date.now());
 
+  // 1-second tick — needed for live poison HP drain and accurate countdown
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 10_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
 
@@ -32,7 +33,7 @@ export function CharacterPanel() {
 
   // Optimistic energy estimate
   const lastRegen     = character.lastEnergyRegen ? new Date(character.lastEnergyRegen).getTime() : now;
-  const minutesSince  = (now - lastRegen) / 60000;
+  const minutesSince  = (now - lastRegen) / 60_000;
   const displayEnergy = Math.min(
     character.energy + Math.floor(minutesSince * REGEN_RATE),
     character.maxEnergy
@@ -41,18 +42,29 @@ export function CharacterPanel() {
     ? Math.ceil((character.maxEnergy - displayEnergy) / REGEN_RATE)
     : 0;
 
-  // Poison status
-  const poisonedUntil  = character.poisonedUntil ? new Date(character.poisonedUntil).getTime() : 0;
-  const poisonActive   = poisonedUntil > now;
-  const poisonMsLeft   = poisonActive ? poisonedUntil - now : 0;
-  const poisonHrs      = Math.floor(poisonMsLeft / 3_600_000);
-  const poisonMins     = Math.floor((poisonMsLeft % 3_600_000) / 60_000);
-  const poisonLabel    = poisonHrs > 0 ? `${poisonHrs}h ${poisonMins}m` : `${poisonMins}m`;
+  // Poison status — simulate pending damage client-side so HP drains live
+  const poisonedUntil = character.poisonedUntil ? new Date(character.poisonedUntil).getTime() : 0;
+  const poisonActive  = poisonedUntil > now;
+  const poisonMsLeft  = poisonActive ? poisonedUntil - now : 0;
+  const poisonHrs     = Math.floor(poisonMsLeft / 3_600_000);
+  const poisonMins    = Math.floor((poisonMsLeft % 3_600_000) / 60_000);
+  const poisonSecs    = Math.floor((poisonMsLeft % 60_000) / 1_000);
+  const poisonLabel   = poisonHrs > 0
+    ? `${poisonHrs}h ${poisonMins}m`
+    : poisonMins > 0
+      ? `${poisonMins}m ${poisonSecs}s`
+      : `${poisonSecs}s`;
+
+  // Pending poison ticks since last server-applied tick
+  const lastTick        = character.lastPoisonTick ? new Date(character.lastPoisonTick).getTime() : now;
+  const effectiveNow    = poisonActive ? Math.min(now, poisonedUntil) : now;
+  const pendingPoison   = poisonActive ? Math.floor((effectiveNow - lastTick) / 1_000) * 15 : 0;
+  const displayHp       = Math.max(0, character.health - pendingPoison);
 
   // Optimistic pain regen estimate
   const maxPain        = character.maxPain ?? 100;
   const lastPainUpd    = character.lastPainUpdate ? new Date(character.lastPainUpdate).getTime() : now;
-  const painMinutes    = (now - lastPainUpd) / 60000;
+  const painMinutes    = (now - lastPainUpd) / 60_000;
   const displayPain    = Math.max(0, (character.pain ?? 0) - painMinutes * (maxPain / PAIN_MINUTES));
   const madness        = character.madness ?? 0;
   const minutesToClear = displayPain > 0
@@ -73,7 +85,14 @@ export function CharacterPanel() {
         </div>
 
         <div className="space-y-2 pt-1">
-          <StatBar label="HP" value={character.health} max={character.maxHealth} color="red" />
+          {/* HP — flashes green when poisoned */}
+          <StatBar
+            label="HP"
+            value={displayHp}
+            max={character.maxHealth}
+            color="red"
+            flash={poisonActive}
+          />
           <div className="space-y-0.5">
             <StatBar label="EN" value={displayEnergy} max={character.maxEnergy} color="green" />
             <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
@@ -91,15 +110,22 @@ export function CharacterPanel() {
               </div>
             </div>
           )}
-          {/* Poison — show while active */}
+          {/* Poison — live countdown row */}
           {poisonActive && (
             <div className="space-y-0.5">
               <div className="flex items-center gap-3">
-                <span className="w-16 text-xs font-mono text-green-700 uppercase">Poison</span>
+                <span className="w-16 text-xs font-mono text-green-600 uppercase animate-pulse">
+                  Poison
+                </span>
                 <div className="flex-1 h-1.5 bg-gray-800 overflow-hidden">
-                  <div className="h-full bg-green-900 animate-pulse" style={{ width: "100%" }} />
+                  <div
+                    className="h-full bg-green-700 animate-pulse"
+                    style={{ width: "100%", animationDuration: "0.5s" }}
+                  />
                 </div>
-                <span className="w-16 text-xs font-mono text-green-700 text-right">{poisonLabel}</span>
+                <span className="w-16 text-xs font-mono text-green-600 text-right tabular-nums">
+                  {poisonLabel}
+                </span>
               </div>
               <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
                 <span>-15 HP/sec</span>

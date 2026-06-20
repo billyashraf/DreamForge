@@ -172,6 +172,16 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | 38% | **−50% HP** — current HP halved (min 1). |
 | 30% | **Double HP** — current HP doubled, capped at max HP. |
 
+### Real-Time Updates
+
+The dashboard polls `/api/auth/me` every **10 seconds** so HP, energy, and character state stay in sync with the server (which applies lazy poison damage and energy regen on each request).
+
+**HP** updates every second client-side by simulating pending poison ticks (`pendingDamage = floor(elapsedSeconds) × 15`) so the bar drains visually without waiting for the next server poll.
+
+**Poison flash** — when a character is poisoned, the HP bar overlays a pulsing green tint (0.5 s cycle) to make the effect immediately visible. The poison countdown label shows hours / minutes / seconds in real time.
+
+**Inventory** re-fetches from the server every **30 seconds** so item counts stay accurate even if items were added externally (e.g. via `/api/seed`).
+
 ### Market
 
 A shop panel is available on the dashboard (left column, below Inventory). All consumable items can be purchased for credits. Credits are deducted immediately and the item is added to the character's inventory.
