@@ -172,6 +172,12 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | 38% | **−50% HP** — current HP halved (min 1). |
 | 30% | **Double HP** — current HP doubled, capped at max HP. |
 
+### Market
+
+A shop panel is available on the dashboard (left column, below Inventory). All consumable items can be purchased for credits. Credits are deducted immediately and the item is added to the character's inventory.
+
+Items are sorted by price. The buy button is greyed out when the character cannot afford the item. Credit balance updates live after each purchase.
+
 Poison accumulates damage based on real elapsed seconds whenever the server handles a request for that character (`/api/auth/me`, mission runs). A poisoned character can survive by using Red Potions or a Revive Potion. Respawning (Wake Up) also clears poison; the Revive Potion clears it too without the respawn penalty.
 
 ---
@@ -192,6 +198,8 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | POST | /api/respawn | Respawn a dead character |
 | GET | /api/inventory | Get character inventory |
 | POST | /api/inventory/use | Use a consumable item (handles revive + black potion specially) |
+| GET | /api/market | List consumable items for sale with prices |
+| POST | /api/market/buy | Buy an item — deducts credits, adds to inventory |
 | GET/POST | /api/guilds | List guilds / create guild |
 | POST | /api/guilds/join | Join a guild |
 | GET/POST | /api/teams | List teams / create team |

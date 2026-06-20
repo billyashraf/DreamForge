@@ -8,6 +8,7 @@ import { TravelPanel } from "@/components/game/TravelPanel";
 import { MissionsPanel } from "@/components/game/MissionsPanel";
 import { GameLog } from "@/components/game/GameLog";
 import { InventoryPanel } from "@/components/game/InventoryPanel";
+import { MarketPanel } from "@/components/game/MarketPanel";
 import { DeathScreen } from "@/components/game/DeathScreen";
 
 export default function DashboardPage() {
@@ -86,6 +87,7 @@ export default function DashboardPage() {
           <CharacterPanel />
           <TravelPanel />
           <InventoryPanel />
+          <MarketPanel />
         </div>
 
         <div className="lg:col-span-2 space-y-4">
