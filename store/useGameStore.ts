@@ -48,6 +48,8 @@ interface CharacterState {
   shadowForm?: string | null;
   merits?: number;
   isDead?: boolean;
+  poisonedUntil?: string | null;
+  lastPoisonTick?: string | null;
 }
 
 interface UserState {

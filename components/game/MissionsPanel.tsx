@@ -87,6 +87,9 @@ export function MissionsPanel() {
         if (d.died) {
           addLog(`${character?.name ?? "You"} has fallen. Respawn required.`, "error");
         }
+        if (d.poisonKill) {
+          addLog("Killed by poison.", "error");
+        }
       } else {
         addLog(
           `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢${d.rewards.merits ? `, +${d.rewards.merits} merits` : ""}, -${energyCost} EN`,

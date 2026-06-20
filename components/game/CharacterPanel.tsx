@@ -22,7 +22,7 @@ export function CharacterPanel() {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
+    const id = setInterval(() => setNow(Date.now()), 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -40,6 +40,14 @@ export function CharacterPanel() {
   const minutesToFull = displayEnergy < character.maxEnergy
     ? Math.ceil((character.maxEnergy - displayEnergy) / REGEN_RATE)
     : 0;
+
+  // Poison status
+  const poisonedUntil  = character.poisonedUntil ? new Date(character.poisonedUntil).getTime() : 0;
+  const poisonActive   = poisonedUntil > now;
+  const poisonMsLeft   = poisonActive ? poisonedUntil - now : 0;
+  const poisonHrs      = Math.floor(poisonMsLeft / 3_600_000);
+  const poisonMins     = Math.floor((poisonMsLeft % 3_600_000) / 60_000);
+  const poisonLabel    = poisonHrs > 0 ? `${poisonHrs}h ${poisonMins}m` : `${poisonMins}m`;
 
   // Optimistic pain regen estimate
   const maxPain        = character.maxPain ?? 100;
@@ -80,6 +88,21 @@ export function CharacterPanel() {
               <StatBar label="PAIN" value={Math.round(displayPain)} max={maxPain} color="orange" />
               <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
                 <span>clears in {minutesToClear}m</span>
+              </div>
+            </div>
+          )}
+          {/* Poison — show while active */}
+          {poisonActive && (
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-3">
+                <span className="w-16 text-xs font-mono text-green-700 uppercase">Poison</span>
+                <div className="flex-1 h-1.5 bg-gray-800 overflow-hidden">
+                  <div className="h-full bg-green-900 animate-pulse" style={{ width: "100%" }} />
+                </div>
+                <span className="w-16 text-xs font-mono text-green-700 text-right">{poisonLabel}</span>
+              </div>
+              <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
+                <span>-15 HP/min</span>
               </div>
             </div>
           )}

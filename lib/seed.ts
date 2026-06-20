@@ -339,6 +339,16 @@ const CONSUMABLE_ITEMS = [
     description: "A large flask of potent crimson liquid. Restores 300 HP.",
     stats: {}, effect: "health_add", effectValue: 300, cooldownMinutes: 0, consumeTimeMinutes: 0, price: 700,
   },
+  {
+    name: "Revive Potion", itemKey: "revive_potion", type: "consumable", rarity: "epic",
+    description: "A shimmering white potion. Brings you back from death at full HP. Clears poison.",
+    stats: {}, effect: "revive", effectValue: 0, cooldownMinutes: 10, consumeTimeMinutes: 0, price: 2000,
+  },
+  {
+    name: "Black Potion", itemKey: "black_potion", type: "consumable", rarity: "legendary",
+    description: "An ominous black potion. The effects are... unpredictable. Drink at your own risk.",
+    stats: {}, effect: null, effectValue: 0, cooldownMinutes: 0, consumeTimeMinutes: 0, price: 999,
+  },
 ];
 
 export const DEMO_CREDENTIALS = {

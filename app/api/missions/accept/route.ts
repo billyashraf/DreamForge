@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
-import { applyEnergyRegen, applyMadnessRegen, applyPainRegen, MISSION_ENERGY_COST } from "@/lib/energy";
+import { applyEnergyRegen, applyMadnessRegen, applyPainRegen, applyPoisonDamage, MISSION_ENERGY_COST } from "@/lib/energy";
 import Mission from "@/models/Mission";
 import Character from "@/models/Character";
 
@@ -100,6 +100,8 @@ function charSnapshot(character: InstanceType<typeof Character>) {
     maxPain:         character.maxPain,
     madness:         character.madness,
     isDead:          character.isDead,
+    poisonedUntil:   character.poisonedUntil,
+    lastPoisonTick:  character.lastPoisonTick,
     lastPainUpdate:  character.lastPainUpdate,
     lastEnergyRegen: character.lastEnergyRegen,
   };
@@ -116,10 +118,30 @@ export async function POST(req: NextRequest) {
 
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
+
+  // Pre-existing dead state (no poison damage this call)
   if (character.isDead) return err("You cannot run missions while dead. Respawn first.");
 
   applyMadnessRegen(character);
+  const poisonDamage = applyPoisonDamage(character);
   await applyEnergyRegen(character);
+
+  // Poison may have killed the character — surface it as a death response
+  if (character.isDead && poisonDamage > 0) {
+    await character.save();
+    return ok({
+      failed:        true,
+      died:          true,
+      hpLost:        poisonDamage,
+      painGained:    0,
+      madnessGained: 0,
+      message:       `${character.name} succumbed to poison.`,
+      narrative:     "The toxin finally won. Darkness takes you before the mission could begin.",
+      character:     charSnapshot(character),
+    });
+  }
+
+  if (character.isDead) return err("You cannot run missions while dead. Respawn first.");
 
   const mission = await Mission.findById(body.missionId);
   if (!mission || !mission.isActive) return err("Mission not found or inactive", 404);

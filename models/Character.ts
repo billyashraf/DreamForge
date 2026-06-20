@@ -49,6 +49,8 @@ export interface ICharacter extends Document {
   madness: number;
   lastPainUpdate?: Date;
   lastMadnessUpdate?: Date;
+  poisonedUntil?: Date;
+  lastPoisonTick?: Date;
   merits: number;
   isDead: boolean;
   shadowForm: string | null;
@@ -105,6 +107,8 @@ const CharacterSchema = new Schema<ICharacter>(
     madness:       { type: Number, default: 0 },
     lastPainUpdate: { type: Date },
     lastMadnessUpdate: { type: Date },
+    poisonedUntil: { type: Date },
+    lastPoisonTick: { type: Date },
     merits: { type: Number, default: 1000 },
     isDead: { type: Boolean, default: false },
     shadowForm: { type: String, default: null },

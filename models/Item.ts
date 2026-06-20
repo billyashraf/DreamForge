@@ -13,7 +13,7 @@ export interface IItem extends Document {
     healthBonus?: number;
     energyBonus?: number;
   };
-  effect: "pain_reduce" | "energy_add" | "health_add" | null;
+  effect: "pain_reduce" | "energy_add" | "health_add" | "revive" | null;
   effectValue: number;
   cooldownMinutes: number;
   consumeTimeMinutes: number;
@@ -39,7 +39,7 @@ const ItemSchema = new Schema<IItem>(
       healthBonus: { type: Number, default: 0 },
       energyBonus: { type: Number, default: 0 },
     },
-    effect: { type: String, enum: ["pain_reduce", "energy_add", "health_add"], default: null },
+    effect: { type: String, enum: ["pain_reduce", "energy_add", "health_add", "revive"], default: null },
     effectValue: { type: Number, default: 0 },
     cooldownMinutes: { type: Number, default: 0 },
     consumeTimeMinutes: { type: Number, default: 0 },

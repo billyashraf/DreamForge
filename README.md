@@ -153,13 +153,26 @@ HP can be restored mid-mission by using Red Potions (inventory). Pain can be sup
 
 Every account starts with 50 of each consumable. Items are shown as icons on the dashboard.
 
-| Item | Effect | Cooldown | Consume Time |
-|------|--------|----------|--------------|
+| Item | Effect | Cooldown | Notes |
+|------|--------|----------|-------|
 | 💊 Sedative | −50 Pain | 60 min | Instant |
-| 🥩 Meat | +300 Energy | None | 3 min |
+| 🥩 Meat | +300 Energy | None | 3 min eat time |
 | 🧪 Red Potion I | +50 HP | None | Instant |
 | 🧪 Red Potion II | +150 HP | None | Instant |
 | 🧪 Red Potion III | +300 HP | None | Instant |
+| 🤍 Revive Potion | Full revive from death | 10 min | Only usable while dead; clears poison; no XP/credit penalty |
+| 🖤 Black Potion | Random (see below) | None | Disabled while dead |
+
+**Black Potion outcomes (mutually exclusive roll):**
+
+| Chance | Outcome |
+|--------|---------|
+| 13% | **Poisoned** — −15 HP/min for 4 hours. Visible in Character Panel with countdown. |
+| 19% | **Sudden death** — instant kill. |
+| 38% | **−50% HP** — current HP halved (min 1). |
+| 30% | **Double HP** — current HP doubled, capped at max HP. |
+
+Poison accumulates damage based on real elapsed time whenever the server handles a request for that character (`/api/auth/me`, mission runs). A poisoned character can survive by using Red Potions or a Revive Potion.
 
 ---
 
@@ -178,7 +191,7 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | POST | /api/missions/accept | Accept and run a mission |
 | POST | /api/respawn | Respawn a dead character |
 | GET | /api/inventory | Get character inventory |
-| POST | /api/inventory/use | Use a consumable item |
+| POST | /api/inventory/use | Use a consumable item (handles revive + black potion specially) |
 | GET/POST | /api/guilds | List guilds / create guild |
 | POST | /api/guilds/join | Join a guild |
 | GET/POST | /api/teams | List teams / create team |

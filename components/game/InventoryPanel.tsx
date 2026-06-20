@@ -10,6 +10,8 @@ const ITEM_META: Record<string, { icon: string; border: string; glow: string; le
   red_potion_1: { icon: "🧪", border: "border-red-900",   glow: "shadow-red-900/40",  level: "I"   },
   red_potion_2: { icon: "🧪", border: "border-red-700",   glow: "shadow-red-800/50",  level: "II"  },
   red_potion_3: { icon: "🧪", border: "border-red-500",   glow: "shadow-red-700/60",  level: "III" },
+  revive_potion: { icon: "🤍", border: "border-white/20",  glow: "shadow-white/10" },
+  black_potion:  { icon: "🖤", border: "border-gray-600",  glow: "shadow-gray-900/80" },
 };
 
 const RARITY_COLORS: Record<string, string> = {
@@ -125,7 +127,8 @@ export function InventoryPanel() {
           const onCooldown = cdMs > 0;
           const consumeSecs = consuming[item.itemKey] ?? 0;
           const isConsuming = consumeSecs > 0;
-          const isDisabled = onCooldown || isConsuming || using === item.itemKey;
+          const isReviveOnly = item.itemKey === "revive_potion" && !character.isDead;
+          const isDisabled = onCooldown || isConsuming || using === item.itemKey || isReviveOnly;
 
           return (
             <div
@@ -196,8 +199,23 @@ export function InventoryPanel() {
                       {onCooldown ? `Cooldown: ${formatMs(cdMs)}` : `Cooldown: ${item.cooldownMinutes}m`}
                     </div>
                   )}
-                  {!isDisabled && (
+                  {item.itemKey === "black_potion" && (
+                    <div className="text-[10px] font-mono text-gray-600 mt-1 space-y-0.5">
+                      <div className="text-gray-500 font-bold">Possible outcomes:</div>
+                      <div>13% — Poisoned (−15 HP/min, 4h)</div>
+                      <div>19% — Sudden death</div>
+                      <div>38% — −50% current HP</div>
+                      <div>30% — Double current HP</div>
+                    </div>
+                  )}
+                  {isReviveOnly && (
+                    <div className="text-[10px] font-mono text-gray-600 mt-1">Only usable when dead</div>
+                  )}
+                  {!isDisabled && item.itemKey !== "black_potion" && (
                     <div className="text-[10px] font-mono text-green-600 mt-1">Click to use</div>
+                  )}
+                  {!isDisabled && item.itemKey === "black_potion" && (
+                    <div className="text-[10px] font-mono text-yellow-700 mt-1">Click to drink (if you dare)</div>
                   )}
                 </div>
               )}
