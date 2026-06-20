@@ -49,6 +49,7 @@ function applyLevelUps(character: InstanceType<typeof Character>): number {
   while (gained < 500) { // safety limit — no practical cap on level
     const required = xpForLevel(character.level);
     if (character.experience < required) break;
+    character.experience -= required;
     character.level     += 1;
     character.maxHealth += 10;
     character.health     = character.maxHealth;
