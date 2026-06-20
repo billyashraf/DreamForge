@@ -69,13 +69,16 @@ export function CharacterPanel() {
     ? Math.floor(hpRegenMinutes * HEALTH_REGEN_RATE)
     : 0;
 
+  // When HP > maxHealth (black potion double), don't cap — show the real value.
+  // pendingHpRegen is already 0 when health >= maxHealth, so no extra cap needed.
   const displayHp = poisonActive
     ? Math.max(0, character.health - pendingPoison)
-    : Math.min(character.health + pendingHpRegen, character.maxHealth);
+    : character.health + pendingHpRegen;
 
-  const minutesToFullHp = displayHp < character.maxHealth && !poisonActive
-    ? Math.ceil((character.maxHealth - displayHp) / HEALTH_REGEN_RATE)
-    : 0;
+  const minutesToFullHp =
+    !poisonActive && displayHp < character.maxHealth
+      ? Math.ceil((character.maxHealth - displayHp) / HEALTH_REGEN_RATE)
+      : 0;
 
   // Optimistic pain regen estimate
   const maxPain        = character.maxPain ?? 100;
@@ -106,23 +109,19 @@ export function CharacterPanel() {
         </div>
 
         <div className="space-y-2 pt-1">
-          {/* HP — flashes green when poisoned; shows regen when healthy */}
+          {/* HP — yellow when over max (black potion), flashes green when poisoned */}
           <div className="space-y-0.5">
             <StatBar
               label="HP"
               value={displayHp}
               max={character.maxHealth}
-              color="red"
+              color={displayHp > character.maxHealth ? "yellow" : "red"}
               flash={poisonActive}
             />
-            {!poisonActive && !character.isDead && (
+            {!poisonActive && !character.isDead && displayHp < character.maxHealth && (
               <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
                 <span>+{HEALTH_REGEN_RATE} HP/min</span>
-                <span>
-                  {displayHp >= character.maxHealth
-                    ? "full"
-                    : `full in ${minutesToFullHp}m`}
-                </span>
+                <span>{minutesToFullHp > 0 ? `full in ${minutesToFullHp}m` : "full"}</span>
               </div>
             )}
           </div>

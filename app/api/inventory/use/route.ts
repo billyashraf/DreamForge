@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
       outcomeKey = "half_hp";
       message = `Black Potion: -50% HP. Now at ${character.health}/${character.maxHealth}.`;
     } else {
-      // 30% — double current HP (capped at maxHealth)
-      character.health = Math.min(character.health * 2, character.maxHealth);
+      // 30% — double current HP (can exceed maxHealth)
+      character.health = character.health * 2;
       outcomeKey = "double_hp";
       message = `Black Potion: HP doubled! Now at ${character.health}/${character.maxHealth}.`;
     }
