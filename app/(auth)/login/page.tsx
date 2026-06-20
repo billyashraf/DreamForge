@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
@@ -18,20 +18,24 @@ const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   banned:                "Your account has been suspended.",
 };
 
+// useSearchParams must live inside a Suspense boundary in Next.js App Router
+function OAuthErrorReader({ onError }: { onError: (msg: string) => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const oauthError = searchParams.get("error");
+    if (oauthError) onError(GOOGLE_ERROR_MESSAGES[oauthError] ?? "Google sign-in failed.");
+  }, [searchParams, onError]);
+  return null;
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { setUser, setCharacter } = useGameStore();
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<"player" | "admin" | null>(null);
-
-  useEffect(() => {
-    const oauthError = searchParams.get("error");
-    if (oauthError) setError(GOOGLE_ERROR_MESSAGES[oauthError] ?? "Google sign-in failed.");
-  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +87,9 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <Suspense fallback={null}>
+        <OAuthErrorReader onError={setError} />
+      </Suspense>
       <div className="w-full max-w-sm space-y-4">
         <div className="text-center">
           <Link href="/" className="font-mono font-bold text-2xl">
