@@ -102,7 +102,7 @@ export function CharacterPanel() {
                 <span className="w-16 text-xs font-mono text-green-700 text-right">{poisonLabel}</span>
               </div>
               <div className="flex justify-between text-xs font-mono text-gray-700 pl-8">
-                <span>-15 HP/min</span>
+                <span>-15 HP/sec</span>
               </div>
             </div>
           )}

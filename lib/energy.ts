@@ -22,7 +22,7 @@ export async function applyEnergyRegen(character: ICharacter): Promise<void> {
   await character.save();
 }
 
-// Poison drains -15 HP per minute while active. Returns total HP damage dealt.
+// Poison drains -15 HP per second while active. Returns total HP damage dealt.
 export function applyPoisonDamage(character: ICharacter): number {
   if (!character.poisonedUntil || character.isDead) return 0;
 
@@ -30,14 +30,14 @@ export function applyPoisonDamage(character: ICharacter): number {
   // Cap effective "now" at expiry so we never apply damage beyond the 4-hour window
   const effectiveNow = now < character.poisonedUntil ? now : character.poisonedUntil;
   const last = (character.lastPoisonTick ?? character.createdAt ?? now) as Date;
-  const minutesElapsed = (effectiveNow.getTime() - last.getTime()) / 60_000;
-  const ticks = Math.floor(minutesElapsed);
+  const secondsElapsed = (effectiveNow.getTime() - last.getTime()) / 1_000;
+  const ticks = Math.floor(secondsElapsed);
 
   if (ticks <= 0) return 0;
 
   const damage = ticks * 15;
   character.health = Math.max(0, character.health - damage);
-  character.lastPoisonTick = new Date(last.getTime() + ticks * 60_000);
+  character.lastPoisonTick = new Date(last.getTime() + ticks * 1_000);
 
   if (character.health <= 0) character.isDead = true;
 

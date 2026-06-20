@@ -161,18 +161,18 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | 🧪 Red Potion II | +150 HP | None | Instant |
 | 🧪 Red Potion III | +300 HP | None | Instant |
 | 🤍 Revive Potion | Full revive from death | 10 min | Only usable while dead; clears poison; no XP/credit penalty |
-| 🖤 Black Potion | Random (see below) | None | Disabled while dead |
+| 🖤 Black Potion | Random (see below) | None | Disabled while dead; no cooldown |
 
 **Black Potion outcomes (mutually exclusive roll):**
 
 | Chance | Outcome |
 |--------|---------|
-| 13% | **Poisoned** — −15 HP/min for 4 hours. Visible in Character Panel with countdown. |
+| 13% | **Poisoned** — −15 HP/sec for 4 hours. Visible in Character Panel with countdown. |
 | 19% | **Sudden death** — instant kill. |
 | 38% | **−50% HP** — current HP halved (min 1). |
 | 30% | **Double HP** — current HP doubled, capped at max HP. |
 
-Poison accumulates damage based on real elapsed time whenever the server handles a request for that character (`/api/auth/me`, mission runs). A poisoned character can survive by using Red Potions or a Revive Potion.
+Poison accumulates damage based on real elapsed seconds whenever the server handles a request for that character (`/api/auth/me`, mission runs). A poisoned character can survive by using Red Potions or a Revive Potion. Respawning (Wake Up) also clears poison; the Revive Potion clears it too without the respawn penalty.
 
 ---
 

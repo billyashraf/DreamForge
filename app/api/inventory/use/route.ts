@@ -14,8 +14,9 @@ function charSnapshot(character: InstanceType<typeof Character>) {
     pain:            character.pain,
     maxPain:         character.maxPain,
     isDead:          character.isDead,
-    poisonedUntil:   character.poisonedUntil,
-    lastPoisonTick:  character.lastPoisonTick,
+    // Always send explicit null so the client store clears these when they're unset
+    poisonedUntil:   character.poisonedUntil ?? null,
+    lastPoisonTick:  character.lastPoisonTick ?? null,
   };
 }
 
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
       character.poisonedUntil = new Date(Date.now() + 4 * 60 * 60_000);
       character.lastPoisonTick = new Date();
       outcomeKey = "poisoned";
-      message = "Black Potion: Poisoned! -15 HP/min for 4 hours.";
+      message = "Black Potion: Poisoned! -15 HP/sec for 4 hours.";
     } else if (roll < 32) {
       // 19% — sudden death
       character.health = 0;

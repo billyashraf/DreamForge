@@ -10,7 +10,7 @@ interface ReviveStatus {
   cooldownLabel: string;
 }
 
-function useReviveStatus(): ReviveStatus {
+function useReviveStatus(refreshToken: number): ReviveStatus {
   const [status, setStatus] = useState<ReviveStatus>({
     hasPotion: false,
     onCooldown: false,
@@ -26,7 +26,10 @@ function useReviveStatus(): ReviveStatus {
       const cds: { itemKey: string; expiresAt: string }[] = data.data.itemCooldowns ?? [];
 
       const slot = inv.find((i) => i.itemKey === "revive_potion");
-      if (!slot || slot.quantity <= 0) return;
+      if (!slot || slot.quantity <= 0) {
+        setStatus({ hasPotion: false, onCooldown: false, cooldownLabel: "" });
+        return;
+      }
 
       const cd = cds.find((c) => c.itemKey === "revive_potion");
       const msLeft = cd ? Math.max(0, new Date(cd.expiresAt).getTime() - Date.now()) : 0;
@@ -41,7 +44,10 @@ function useReviveStatus(): ReviveStatus {
       });
     }
     check();
-  }, []);
+    // Refresh every 30s to update cooldown label
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [refreshToken]);
 
   return status;
 }
@@ -50,7 +56,8 @@ export function DeathScreen() {
   const { character, updateCharacter, addLog } = useGameStore();
   const [respawning, setRespawning] = useState(false);
   const [reviving, setReviving] = useState(false);
-  const revive = useReviveStatus();
+  const [reviveRefresh, setReviveRefresh] = useState(0);
+  const revive = useReviveStatus(reviveRefresh);
 
   async function respawn() {
     setRespawning(true);
@@ -82,6 +89,7 @@ export function DeathScreen() {
       const data = await res.json();
       if (!res.ok) {
         addLog(data.error ?? "Revive failed.", "error");
+        setReviveRefresh((n) => n + 1); // re-check potion status
         return;
       }
       updateCharacter(data.data.character);

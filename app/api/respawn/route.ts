@@ -16,12 +16,15 @@ export async function POST() {
   const xpLost      = Math.floor(character.experience * 0.10);
   const creditsLost = Math.floor(character.credits * 0.10);
 
-  character.isDead          = false;
-  character.health          = Math.max(1, Math.floor(character.maxHealth * 0.30));
-  character.currentLocation = "metapolis";
-  character.experience      = Math.max(0, character.experience - xpLost);
-  character.credits         = Math.max(0, character.credits - creditsLost);
-  character.pain            = 0;
+  character.isDead           = false;
+  character.health           = Math.max(1, Math.floor(character.maxHealth * 0.30));
+  character.currentLocation  = "metapolis";
+  character.experience       = Math.max(0, character.experience - xpLost);
+  character.credits          = Math.max(0, character.credits - creditsLost);
+  character.pain             = 0;
+  // Clear poison so the character isn't immediately killed again after respawn
+  character.poisonedUntil    = undefined;
+  character.lastPoisonTick   = undefined;
 
   await character.save();
 
@@ -30,7 +33,7 @@ export async function POST() {
     xpLost,
     creditsLost,
     character: {
-      isDead:          character.isDead,
+      isDead:          false,
       health:          character.health,
       maxHealth:       character.maxHealth,
       energy:          character.energy,
@@ -39,6 +42,8 @@ export async function POST() {
       experience:      character.experience,
       pain:            character.pain,
       currentLocation: character.currentLocation,
+      poisonedUntil:   null,
+      lastPoisonTick:  null,
     },
   });
 }

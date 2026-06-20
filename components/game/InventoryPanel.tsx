@@ -76,9 +76,11 @@ export function InventoryPanel() {
     setCooldowns(data.data.itemCooldowns ?? []);
   }, []);
 
+  // Fetch on mount — this component is only rendered when character is set
   useEffect(() => {
-    if (character?.id) fetchInventory();
-  }, [character?.id, fetchInventory]);
+    fetchInventory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function useItem(item: InvItem) {
     if (using) return;
@@ -104,8 +106,13 @@ export function InventoryPanel() {
       setInventory(d.inventory);
       setCooldowns(d.itemCooldowns ?? []);
 
-      const effectLabel = formatEffect(item.effect, item.effectValue);
-      addLog(`Used ${item.name}${effectLabel ? ` — ${effectLabel}` : ""}`, "success");
+      // For black potion use the server's outcome message; otherwise format the effect
+      if (d.outcomeKey) {
+        addLog(d.message, d.outcomeKey === "death" || d.outcomeKey === "poisoned" ? "error" : "success");
+      } else {
+        const effectLabel = formatEffect(item.effect, item.effectValue);
+        addLog(`Used ${item.name}${effectLabel ? ` — ${effectLabel}` : ""}`, "success");
+      }
     } catch {
       addLog("Failed to use item.", "error");
     } finally {
@@ -115,7 +122,16 @@ export function InventoryPanel() {
 
   if (!character) return null;
   const visible = inventory.filter((i) => i.quantity > 0);
-  if (visible.length === 0) return null;
+
+  if (visible.length === 0) {
+    return (
+      <Card title="Inventory" accent="yellow">
+        <p className="text-xs font-mono text-gray-600">
+          No items. Run <span className="text-yellow-700">POST /api/seed</span> to stock up.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card title="Inventory" accent="yellow">
@@ -202,7 +218,7 @@ export function InventoryPanel() {
                   {item.itemKey === "black_potion" && (
                     <div className="text-[10px] font-mono text-gray-600 mt-1 space-y-0.5">
                       <div className="text-gray-500 font-bold">Possible outcomes:</div>
-                      <div>13% — Poisoned (−15 HP/min, 4h)</div>
+                      <div>13% — Poisoned (−15 HP/sec, 4h)</div>
                       <div>19% — Sudden death</div>
                       <div>38% — −50% current HP</div>
                       <div>30% — Double current HP</div>
