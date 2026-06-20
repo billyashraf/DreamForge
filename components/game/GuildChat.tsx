@@ -28,7 +28,7 @@ export function GuildChat() {
   const [sending, setSending]       = useState(false);
   const [error, setError]           = useState("");
   const [cooldown, setCooldown]     = useState(0);
-  const bottomRef                   = useRef<HTMLDivElement>(null);
+  const chatContainerRef            = useRef<HTMLDivElement>(null);
 
   // Load guild names once
   useEffect(() => {
@@ -61,7 +61,8 @@ export function GuildChat() {
   }, [activeGuild, fetchMessages]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -125,7 +126,7 @@ export function GuildChat() {
           <p className="text-xs font-mono text-gray-700">Live echo · 1 message / min</p>
         )}
 
-        <div className="h-48 overflow-y-auto space-y-1 border border-gray-800 bg-gray-950 p-2">
+        <div ref={chatContainerRef} className="h-48 overflow-y-auto space-y-1 border border-gray-800 bg-gray-950 p-2">
           {messages.length === 0 ? (
             <p className="text-xs font-mono text-gray-800">No echoes yet.</p>
           ) : (
@@ -142,7 +143,6 @@ export function GuildChat() {
               </div>
             ))
           )}
-          <div ref={bottomRef} />
         </div>
 
         <form onSubmit={send} className="flex gap-2">

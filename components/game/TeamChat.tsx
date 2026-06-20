@@ -20,7 +20,7 @@ export function TeamChat() {
   const [sending, setSending]   = useState(false);
   const [error, setError]       = useState("");
   const [cooldown, setCooldown] = useState(0);
-  const bottomRef               = useRef<HTMLDivElement>(null);
+  const chatContainerRef        = useRef<HTMLDivElement>(null);
 
   const fetchMessages = useCallback(async () => {
     const res = await fetch("/api/chat/team");
@@ -38,7 +38,8 @@ export function TeamChat() {
   }, [character?.teamId, fetchMessages]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function TeamChat() {
       <div className="space-y-2">
         <p className="text-xs font-mono text-gray-700">Live channel · 1 message / min</p>
 
-        <div className="h-48 overflow-y-auto space-y-1 border border-gray-800 bg-gray-950 p-2">
+        <div ref={chatContainerRef} className="h-48 overflow-y-auto space-y-1 border border-gray-800 bg-gray-950 p-2">
           {messages.length === 0 ? (
             <p className="text-xs font-mono text-gray-800">No transmissions yet.</p>
           ) : (
@@ -94,7 +95,6 @@ export function TeamChat() {
               </div>
             ))
           )}
-          <div ref={bottomRef} />
         </div>
 
         <form onSubmit={send} className="flex gap-2">
