@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IItem extends Document {
   name: string;
+  itemKey: string;
   type: "weapon" | "armor" | "consumable" | "material" | "tool";
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
   description: string;
@@ -12,6 +13,10 @@ export interface IItem extends Document {
     healthBonus?: number;
     energyBonus?: number;
   };
+  effect: "pain_reduce" | "energy_add" | "health_add" | null;
+  effectValue: number;
+  cooldownMinutes: number;
+  consumeTimeMinutes: number;
   price: number;
   isAvailable: boolean;
 }
@@ -19,6 +24,7 @@ export interface IItem extends Document {
 const ItemSchema = new Schema<IItem>(
   {
     name: { type: String, required: true, unique: true, trim: true },
+    itemKey: { type: String, default: "" },
     type: { type: String, enum: ["weapon", "armor", "consumable", "material", "tool"], required: true },
     rarity: {
       type: String,
@@ -33,6 +39,10 @@ const ItemSchema = new Schema<IItem>(
       healthBonus: { type: Number, default: 0 },
       energyBonus: { type: Number, default: 0 },
     },
+    effect: { type: String, enum: ["pain_reduce", "energy_add", "health_add"], default: null },
+    effectValue: { type: Number, default: 0 },
+    cooldownMinutes: { type: Number, default: 0 },
+    consumeTimeMinutes: { type: Number, default: 0 },
     price: { type: Number, required: true, min: 0 },
     isAvailable: { type: Boolean, default: true },
   },

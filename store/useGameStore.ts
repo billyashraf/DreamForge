@@ -1,5 +1,22 @@
 import { create } from "zustand";
 
+export interface InvItem {
+  itemKey: string;
+  name: string;
+  quantity: number;
+  effect: string | null;
+  effectValue: number;
+  cooldownMinutes: number;
+  consumeTimeMinutes: number;
+  description: string;
+  rarity: string;
+}
+
+export interface ItemCooldown {
+  itemKey: string;
+  expiresAt: string;
+}
+
 interface CharacterState {
   id: string;
   name: string;
@@ -29,6 +46,7 @@ interface CharacterState {
   madness?: number;
   lastPainUpdate?: string | null;
   shadowForm?: string | null;
+  merits?: number;
 }
 
 interface UserState {

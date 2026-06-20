@@ -7,6 +7,7 @@ import { CharacterPanel } from "@/components/game/CharacterPanel";
 import { TravelPanel } from "@/components/game/TravelPanel";
 import { MissionsPanel } from "@/components/game/MissionsPanel";
 import { GameLog } from "@/components/game/GameLog";
+import { InventoryPanel } from "@/components/game/InventoryPanel";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -79,6 +80,7 @@ export default function DashboardPage() {
         <div className="space-y-4">
           <CharacterPanel />
           <TravelPanel />
+          <InventoryPanel />
         </div>
 
         <div className="lg:col-span-2 space-y-4">

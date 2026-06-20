@@ -37,7 +37,8 @@ export interface ICharacter extends Document {
     crafting: number;
   };
   currentLocation: string;
-  inventory: Types.ObjectId[];
+  inventory: { itemId: Types.ObjectId; quantity: number }[];
+  itemCooldowns: { itemKey: string; expiresAt: Date }[];
   guildId?: Types.ObjectId;
   teamId?: Types.ObjectId;
   activeMissions: Types.ObjectId[];
@@ -79,7 +80,20 @@ const CharacterSchema = new Schema<ICharacter>(
       crafting: { type: Number, default: 1 },
     },
     currentLocation: { type: String, default: "metapolis" },
-    inventory: [{ type: Schema.Types.ObjectId, ref: "Item" }],
+    inventory: [
+      {
+        itemId: { type: Schema.Types.ObjectId, ref: "Item", required: true },
+        quantity: { type: Number, default: 1, min: 0 },
+        _id: false,
+      },
+    ],
+    itemCooldowns: [
+      {
+        itemKey: { type: String, required: true },
+        expiresAt: { type: Date, required: true },
+        _id: false,
+      },
+    ],
     guildId: { type: Schema.Types.ObjectId, ref: "Guild" },
     teamId: { type: Schema.Types.ObjectId, ref: "Team" },
     activeMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],

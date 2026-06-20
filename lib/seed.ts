@@ -301,16 +301,44 @@ const INITIAL_MISSIONS = [
 ];
 
 const INITIAL_ITEMS = [
-  { name: "Iron Scrap Blade", type: "weapon", rarity: "common", description: "A crude blade forged from junkyard scrap.", stats: { strength: 3 }, price: 150 },
-  { name: "Moon Dome Helmet", type: "armor", rarity: "common", description: "Standard-issue dome worker helmet. Dented but functional.", stats: { agility: 1, healthBonus: 15 }, price: 100 },
-  { name: "Energy Cell", type: "consumable", rarity: "common", description: "Restores 25 energy points.", stats: { energyBonus: 25 }, price: 50 },
-  { name: "MedKit", type: "consumable", rarity: "common", description: "Basic first aid kit. Restores 50 health.", stats: { healthBonus: 50 }, price: 80 },
-  { name: "Scavenger's Gloves", type: "armor", rarity: "uncommon", description: "Worn by veteran junkyard scavengers.", stats: { agility: 3, strength: 1 }, price: 300 },
-  { name: "Tactical Scanner", type: "tool", rarity: "uncommon", description: "Reveals hidden loot in the junkyard.", stats: { intelligence: 5 }, price: 400 },
-  { name: "Earth Steel Sword", type: "weapon", rarity: "rare", description: "Forged from pre-apocalypse Earth steel — extremely durable.", stats: { strength: 8 }, price: 800 },
-  { name: "Void Armor Chestplate", type: "armor", rarity: "rare", description: "Lightweight alloy armor from Mars raiders.", stats: { agility: 4, healthBonus: 50 }, price: 1200 },
-  { name: "Neural Amplifier", type: "tool", rarity: "epic", description: "Boosts cognitive response for strategic combat.", stats: { intelligence: 10 }, price: 3000 },
-  { name: "Legendary Dome Breaker", type: "weapon", rarity: "legendary", description: "A weapon so powerful it could crack the Moon's dome.", stats: { strength: 20, agility: 8 }, price: 10000 },
+  { name: "Iron Scrap Blade", itemKey: "", type: "weapon", rarity: "common", description: "A crude blade forged from junkyard scrap.", stats: { strength: 3 }, price: 150 },
+  { name: "Moon Dome Helmet", itemKey: "", type: "armor", rarity: "common", description: "Standard-issue dome worker helmet. Dented but functional.", stats: { agility: 1, healthBonus: 15 }, price: 100 },
+  { name: "Energy Cell", itemKey: "", type: "consumable", rarity: "common", description: "Restores 25 energy points.", stats: { energyBonus: 25 }, price: 50 },
+  { name: "MedKit", itemKey: "", type: "consumable", rarity: "common", description: "Basic first aid kit. Restores 50 health.", stats: { healthBonus: 50 }, price: 80 },
+  { name: "Scavenger's Gloves", itemKey: "", type: "armor", rarity: "uncommon", description: "Worn by veteran junkyard scavengers.", stats: { agility: 3, strength: 1 }, price: 300 },
+  { name: "Tactical Scanner", itemKey: "", type: "tool", rarity: "uncommon", description: "Reveals hidden loot in the junkyard.", stats: { intelligence: 5 }, price: 400 },
+  { name: "Earth Steel Sword", itemKey: "", type: "weapon", rarity: "rare", description: "Forged from pre-apocalypse Earth steel — extremely durable.", stats: { strength: 8 }, price: 800 },
+  { name: "Void Armor Chestplate", itemKey: "", type: "armor", rarity: "rare", description: "Lightweight alloy armor from Mars raiders.", stats: { agility: 4, healthBonus: 50 }, price: 1200 },
+  { name: "Neural Amplifier", itemKey: "", type: "tool", rarity: "epic", description: "Boosts cognitive response for strategic combat.", stats: { intelligence: 10 }, price: 3000 },
+  { name: "Legendary Dome Breaker", itemKey: "", type: "weapon", rarity: "legendary", description: "A weapon so powerful it could crack the Moon's dome.", stats: { strength: 20, agility: 8 }, price: 10000 },
+];
+
+const CONSUMABLE_ITEMS = [
+  {
+    name: "Sedative", itemKey: "sedative", type: "consumable", rarity: "uncommon",
+    description: "A synthetic sedative compound. Suppresses pain receptors immediately.",
+    stats: {}, effect: "pain_reduce", effectValue: 50, cooldownMinutes: 60, consumeTimeMinutes: 0, price: 200,
+  },
+  {
+    name: "Meat", itemKey: "meat", type: "consumable", rarity: "common",
+    description: "Raw protein rations. Slow to eat but restores significant energy.",
+    stats: {}, effect: "energy_add", effectValue: 300, cooldownMinutes: 0, consumeTimeMinutes: 3, price: 40,
+  },
+  {
+    name: "Red Potion I", itemKey: "red_potion_1", type: "consumable", rarity: "common",
+    description: "A small vial of crimson liquid. Restores 50 HP.",
+    stats: {}, effect: "health_add", effectValue: 50, cooldownMinutes: 0, consumeTimeMinutes: 0, price: 100,
+  },
+  {
+    name: "Red Potion II", itemKey: "red_potion_2", type: "consumable", rarity: "uncommon",
+    description: "A medium vial of concentrated crimson liquid. Restores 150 HP.",
+    stats: {}, effect: "health_add", effectValue: 150, cooldownMinutes: 0, consumeTimeMinutes: 0, price: 300,
+  },
+  {
+    name: "Red Potion III", itemKey: "red_potion_3", type: "consumable", rarity: "rare",
+    description: "A large flask of potent crimson liquid. Restores 300 HP.",
+    stats: {}, effect: "health_add", effectValue: 300, cooldownMinutes: 0, consumeTimeMinutes: 0, price: 700,
+  },
 ];
 
 export const DEMO_CREDENTIALS = {
@@ -495,12 +523,28 @@ export async function seed() {
   );
   console.log(`Upserted ${INITIAL_MISSIONS.length} missions`);
 
-  // Items
-  const itemCount = await Item.countDocuments();
-  if (itemCount === 0) {
-    await Item.insertMany(INITIAL_ITEMS);
-    console.log(`Seeded ${INITIAL_ITEMS.length} items`);
-  }
+  // Items — upsert base items by name
+  await Item.bulkWrite(
+    INITIAL_ITEMS.map((item) => ({
+      updateOne: {
+        filter: { name: item.name },
+        update: { $set: item as never },
+        upsert: true,
+      },
+    }))
+  );
+
+  // Consumable items — upsert by itemKey
+  await Item.bulkWrite(
+    CONSUMABLE_ITEMS.map((item) => ({
+      updateOne: {
+        filter: { itemKey: item.itemKey },
+        update: { $set: item as never },
+        upsert: true,
+      },
+    }))
+  );
+  console.log(`Upserted ${INITIAL_ITEMS.length + CONSUMABLE_ITEMS.length} items`);
 
   // ── Demo player account ────────────────────────────────────────────────────
   const { email: pEmail, password: pPass, username: pUser } = DEMO_CREDENTIALS.player;
@@ -673,6 +717,32 @@ export async function seed() {
       console.log(`Created team: ${t.name}`);
     }
   }
+
+  // ── Give consumables to all characters ────────────────────────────────────
+  const consumableItemDocs = await Item.find({
+    itemKey: { $in: CONSUMABLE_ITEMS.map((c) => c.itemKey) },
+  });
+
+  const allCharIds = [
+    demoCharacter?._id,
+    adminCharacter?._id,
+    ...testCharacters.map((c) => c?._id),
+  ].filter(Boolean);
+
+  for (const charId of allCharIds) {
+    const char = await Character.findById(charId).select("inventory");
+    if (!char) continue;
+    for (const itemDoc of consumableItemDocs) {
+      const existingIdx = char.inventory.findIndex(
+        (slot) => slot.itemId.toString() === (itemDoc._id as { toString(): string }).toString()
+      );
+      if (existingIdx === -1) {
+        char.inventory.push({ itemId: itemDoc._id as never, quantity: 50 });
+      }
+    }
+    await char.save();
+  }
+  console.log(`Gave 50x each consumable to ${allCharIds.length} characters`);
 
   console.log("Seed complete.");
   return {
