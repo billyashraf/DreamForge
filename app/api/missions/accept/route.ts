@@ -20,6 +20,14 @@ const PAIN_GAIN: Record<string, number> = {
   legendary: 60,
 };
 
+// [min, max] HP lost on a failed mission
+const HP_LOSS: Record<string, [number, number]> = {
+  easy:      [5,  15],
+  medium:    [15, 35],
+  hard:      [30, 60],
+  legendary: [50, 90],
+};
+
 const FAIL_NARRATIVES: Record<string, string[]> = {
   easy: [
     "Something went wrong — a rookie mistake. You limp back empty-handed.",
@@ -39,14 +47,32 @@ const FAIL_NARRATIVES: Record<string, string[]> = {
   ],
 };
 
-// XP required to reach the next level — infinite, no cap
+const DEATH_NARRATIVES: Record<string, string[]> = {
+  easy: [
+    "A simple mistake turned fatal. The world goes dark.",
+    "Overconfidence. The last thing you see is the ground rushing up.",
+  ],
+  medium: [
+    "The ambush was more coordinated than expected. Your body gives out.",
+    "Too many wounds. You slip from consciousness.",
+  ],
+  hard: [
+    "The mission broke you. You collapse in the dust.",
+    "Darkness takes you. You fought well — but not well enough.",
+  ],
+  legendary: [
+    "The legend ends here. For now.",
+    "Even the strongest fall. You are no exception.",
+  ],
+};
+
 function xpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(level, 1.5));
 }
 
 function applyLevelUps(character: InstanceType<typeof Character>): number {
   let gained = 0;
-  while (gained < 500) { // safety limit — no practical cap on level
+  while (gained < 500) {
     const required = xpForLevel(character.level);
     if (character.experience < required) break;
     character.experience -= required;
@@ -60,6 +86,25 @@ function applyLevelUps(character: InstanceType<typeof Character>): number {
   return gained;
 }
 
+function charSnapshot(character: InstanceType<typeof Character>) {
+  return {
+    level:           character.level,
+    experience:      character.experience,
+    credits:         character.credits,
+    merits:          character.merits,
+    health:          character.health,
+    maxHealth:       character.maxHealth,
+    energy:          character.energy,
+    maxEnergy:       character.maxEnergy,
+    pain:            character.pain,
+    maxPain:         character.maxPain,
+    madness:         character.madness,
+    isDead:          character.isDead,
+    lastPainUpdate:  character.lastPainUpdate,
+    lastEnergyRegen: character.lastEnergyRegen,
+  };
+}
+
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return unauthorized();
@@ -71,6 +116,7 @@ export async function POST(req: NextRequest) {
 
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
+  if (character.isDead) return err("You cannot run missions while dead. Respawn first.");
 
   applyMadnessRegen(character);
   await applyEnergyRegen(character);
@@ -90,7 +136,6 @@ export async function POST(req: NextRequest) {
     return err(`Not enough energy. Need ${energyCost} EN. Regenerates in ~${minutesNeeded} min.`);
   }
 
-  // Deduct energy regardless of outcome
   character.energy -= energyCost;
   character.lastEnergyRegen = new Date();
 
@@ -99,15 +144,14 @@ export async function POST(req: NextRequest) {
   const failed     = Math.random() < failChance;
 
   if (failed) {
-    // Apply pain regen first, then add new pain
     applyPainRegen(character);
 
+    // Pain
     const painGained = PAIN_GAIN[mission.difficulty] ?? 15;
     const maxPain    = character.maxPain ?? 100;
     character.pain   = (character.pain ?? 0) + painGained;
     character.lastPainUpdate = new Date();
 
-    // Overflow: each time pain hits max, gain 1 madness and wrap around
     let madnessGained = 0;
     while (character.pain >= maxPain) {
       character.pain    -= maxPain;
@@ -115,37 +159,33 @@ export async function POST(req: NextRequest) {
       madnessGained++;
     }
 
+    // HP loss
+    const [minLoss, maxLoss] = HP_LOSS[mission.difficulty] ?? [10, 20];
+    const hpLost = minLoss + Math.floor(Math.random() * (maxLoss - minLoss + 1));
+    character.health = Math.max(0, character.health - hpLost);
+
+    const died = character.health <= 0;
+    if (died) character.isDead = true;
+
     await character.save();
 
-    const narratives = FAIL_NARRATIVES[mission.difficulty] ?? FAIL_NARRATIVES.easy;
-    const narrative  = narratives[Math.floor(Math.random() * narratives.length)];
+    const pool    = died ? DEATH_NARRATIVES : FAIL_NARRATIVES;
+    const options = (pool[mission.difficulty] ?? pool.easy);
+    const narrative = options[Math.floor(Math.random() * options.length)];
 
     return ok({
-      message:       `Mission failed: ${mission.title}`,
+      message:       died ? `${character.name} has fallen.` : `Mission failed: ${mission.title}`,
       narrative,
       failed:        true,
+      died,
+      hpLost,
       painGained,
       madnessGained,
-      character: {
-        level:          character.level,
-        experience:     character.experience,
-        credits:        character.credits,
-        merits:         character.merits,
-        health:         character.health,
-        maxHealth:      character.maxHealth,
-        energy:         character.energy,
-        maxEnergy:      character.maxEnergy,
-        pain:           character.pain,
-        maxPain:        character.maxPain,
-        madness:        character.madness,
-        lastPainUpdate: character.lastPainUpdate,
-        lastEnergyRegen: character.lastEnergyRegen,
-      },
+      character:     charSnapshot(character),
     });
   }
 
   // ── Success ───────────────────────────────────────────────────────────────
-  // Pain recedes on success too (time passed)
   applyPainRegen(character);
 
   character.experience += mission.rewards.experience;
@@ -159,27 +199,14 @@ export async function POST(req: NextRequest) {
     message:   `Mission complete: ${mission.title}`,
     narrative: mission.narrative || `You completed: ${mission.description}`,
     failed:    false,
+    died:      false,
     rewards:   {
       experience: mission.rewards.experience,
       credits:    mission.rewards.credits,
       merits:     mission.rewards.merits ?? 0,
     },
     levelsGained,
-    newLevel: levelsGained > 0 ? character.level : null,
-    character: {
-      level:          character.level,
-      experience:     character.experience,
-      credits:        character.credits,
-      merits:         character.merits,
-      health:         character.health,
-      maxHealth:      character.maxHealth,
-      energy:         character.energy,
-      maxEnergy:      character.maxEnergy,
-      pain:           character.pain,
-      maxPain:        character.maxPain,
-      madness:        character.madness,
-      lastPainUpdate: character.lastPainUpdate,
-      lastEnergyRegen: character.lastEnergyRegen,
-    },
+    newLevel:  levelsGained > 0 ? character.level : null,
+    character: charSnapshot(character),
   });
 }

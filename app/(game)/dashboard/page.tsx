@@ -8,6 +8,7 @@ import { TravelPanel } from "@/components/game/TravelPanel";
 import { MissionsPanel } from "@/components/game/MissionsPanel";
 import { GameLog } from "@/components/game/GameLog";
 import { InventoryPanel } from "@/components/game/InventoryPanel";
+import { DeathScreen } from "@/components/game/DeathScreen";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -39,6 +40,10 @@ export default function DashboardPage() {
         <div className="text-xs font-mono text-gray-600 animate-pulse">CONNECTING TO METAPOLIS...</div>
       </div>
     );
+  }
+
+  if (character.isDead) {
+    return <DeathScreen />;
   }
 
   const location = character.currentLocation;

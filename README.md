@@ -121,6 +121,48 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
 
 ---
 
+## Combat & Survival Systems
+
+### Mission Failure
+
+When a mission fails, the character takes random HP damage scaled to difficulty:
+
+| Difficulty | HP Loss | Fail Chance |
+|------------|---------|-------------|
+| Easy | 5–15 HP | 10% |
+| Medium | 15–35 HP | 25% |
+| Hard | 30–60 HP | 40% |
+| Legendary | 50–90 HP | 60% |
+
+Failed missions also add Pain (which accumulates into Madness) and cost energy.
+
+### Death System
+
+When HP reaches 0, the character dies (`isDead = true`). The dashboard switches to a death screen — all gameplay is locked until the character respawns.
+
+**Respawn** (`POST /api/respawn`):
+- Teleported to Metapolis
+- Wakes at 30% max HP
+- Pain cleared
+- −10% current XP
+- −10% current credits
+
+HP can be restored mid-mission by using Red Potions (inventory). Pain can be suppressed with the Sedative.
+
+### Inventory & Consumables
+
+Every account starts with 50 of each consumable. Items are shown as icons on the dashboard.
+
+| Item | Effect | Cooldown | Consume Time |
+|------|--------|----------|--------------|
+| 💊 Sedative | −50 Pain | 60 min | Instant |
+| 🥩 Meat | +300 Energy | None | 3 min |
+| 🧪 Red Potion I | +50 HP | None | Instant |
+| 🧪 Red Potion II | +150 HP | None | Instant |
+| 🧪 Red Potion III | +300 HP | None | Instant |
+
+---
+
 ## API Routes
 
 | Method | Route | Description |
@@ -134,6 +176,9 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
 | GET/POST | /api/character | Get or create character |
 | GET | /api/missions | List missions at current location |
 | POST | /api/missions/accept | Accept and run a mission |
+| POST | /api/respawn | Respawn a dead character |
+| GET | /api/inventory | Get character inventory |
+| POST | /api/inventory/use | Use a consumable item |
 | GET/POST | /api/guilds | List guilds / create guild |
 | POST | /api/guilds/join | Join a guild |
 | GET/POST | /api/teams | List teams / create team |
@@ -146,7 +191,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
 | GET | /api/commits | Live GitHub commit feed |
 | GET | /api/admin/stats | Admin stats (admin/mod only) |
 | GET/PATCH | /api/admin/users | Manage users (admin/mod only) |
-| GET/POST/DELETE | /api/admin/missions | Manage missions (admin/mod only) |
+| GET/POST/PUT/DELETE | /api/admin/missions | Manage missions (admin/mod only) |
 
 ---
 

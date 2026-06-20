@@ -47,6 +47,7 @@ interface CharacterState {
   lastPainUpdate?: string | null;
   shadowForm?: string | null;
   merits?: number;
+  isDead?: boolean;
 }
 
 interface UserState {

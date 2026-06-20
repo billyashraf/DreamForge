@@ -50,6 +50,7 @@ export interface ICharacter extends Document {
   lastPainUpdate?: Date;
   lastMadnessUpdate?: Date;
   merits: number;
+  isDead: boolean;
   shadowForm: string | null;
   curseTree: ICurseNode[];
   curseLinks: ICurseLink[];
@@ -105,6 +106,7 @@ const CharacterSchema = new Schema<ICharacter>(
     lastPainUpdate: { type: Date },
     lastMadnessUpdate: { type: Date },
     merits: { type: Number, default: 1000 },
+    isDead: { type: Boolean, default: false },
     shadowForm: { type: String, default: null },
     curseTree: [
       {

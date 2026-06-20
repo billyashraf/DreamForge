@@ -79,10 +79,14 @@ export function MissionsPanel() {
       addLog(d.narrative, d.failed ? "error" : "narrative");
 
       if (d.failed) {
+        const hpNote = d.hpLost > 0 ? `, -${d.hpLost} HP` : "";
         addLog(
-          `Mission failed: ${title} — +${d.painGained} pain${d.madnessGained > 0 ? `, +${d.madnessGained} MADNESS` : ""}, -${energyCost} EN`,
+          `Mission failed: ${title} — +${d.painGained} pain${d.madnessGained > 0 ? `, +${d.madnessGained} MADNESS` : ""}${hpNote}, -${energyCost} EN`,
           "error"
         );
+        if (d.died) {
+          addLog(`${character?.name ?? "You"} has fallen. Respawn required.`, "error");
+        }
       } else {
         addLog(
           `Completed: ${title} — +${d.rewards.experience} XP, +${d.rewards.credits}¢${d.rewards.merits ? `, +${d.rewards.merits} merits` : ""}, -${energyCost} EN`,
