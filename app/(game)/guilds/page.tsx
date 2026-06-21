@@ -14,16 +14,7 @@ interface Guild {
   description: string;
   members: string[];
   marsRating: number;
-  leaderId: { _id: string; name: string; level: number };
-}
-
-interface Application {
-  _id: string;
-  characterId: string;
-  characterName: string;
-  guildId: string;
-  status: "pending" | "accepted" | "rejected";
-  createdAt: string;
+  leaderId: { name: string; level: number };
 }
 
 export default function GuildsPage() {
@@ -31,18 +22,11 @@ export default function GuildsPage() {
   const { user, character, setUser, setCharacter, addLog } = useGameStore();
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState<string | null>(null);
+  const [joining, setJoining] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", tag: "", description: "" });
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
-
-  // My pending applications (keyed by guildId)
-  const [myApps, setMyApps] = useState<Record<string, Application>>({});
-
-  // Incoming applications for guilds I lead
-  const [incomingApps, setIncomingApps] = useState<Record<string, Application[]>>({});
-  const [reviewing, setReviewing] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -64,41 +48,11 @@ export default function GuildsPage() {
     setLoading(false);
   }, []);
 
-  const fetchMyApps = useCallback(async () => {
-    const res = await fetch("/api/guilds/my-applications");
-    if (!res.ok) return;
-    const data = await res.json();
-    const apps: Application[] = data.data.applications ?? [];
-    const map: Record<string, Application> = {};
-    for (const a of apps) if (a.status === "pending") map[a.guildId] = a;
-    setMyApps(map);
-  }, []);
+  useEffect(() => { fetchGuilds(); }, [fetchGuilds]);
 
-  useEffect(() => { fetchGuilds(); fetchMyApps(); }, [fetchGuilds, fetchMyApps]);
-
-  // Fetch incoming applications for guilds the current character leads
-  useEffect(() => {
-    if (!guilds.length || !character) return;
-    const ledGuilds = guilds.filter((g) => g.leaderId._id === character.id);
-    if (!ledGuilds.length) return;
-
-    Promise.all(
-      ledGuilds.map(async (g) => {
-        const res = await fetch(`/api/guilds/${g._id}/applications`);
-        if (!res.ok) return [g._id, []] as const;
-        const data = await res.json();
-        return [g._id, data.data.applications ?? []] as const;
-      })
-    ).then((results) => {
-      const map: Record<string, Application[]> = {};
-      for (const [gid, apps] of results) map[gid] = apps;
-      setIncomingApps(map);
-    });
-  }, [guilds, character]);
-
-  async function applyToGuild(guildId: string) {
-    setApplying(guildId);
-    const res = await fetch("/api/guilds/apply", {
+  async function joinGuild(guildId: string) {
+    setJoining(guildId);
+    const res = await fetch("/api/guilds/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ guildId }),
@@ -106,33 +60,16 @@ export default function GuildsPage() {
     const data = await res.json();
     if (res.ok) {
       addLog(data.data.message, "success");
-      fetchMyApps();
-    } else {
-      addLog(data.error, "error");
-    }
-    setApplying(null);
-  }
-
-  async function reviewApp(guildId: string, applicationId: string, action: "accept" | "reject") {
-    setReviewing(applicationId);
-    const res = await fetch(`/api/guilds/${guildId}/applications/${applicationId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      addLog(data.data.message, action === "accept" ? "success" : "info");
-      // Refresh both guild list and incoming apps
+      setCharacter({
+        ...character!,
+        guildId: data.data.guildId,
+        guildIds: data.data.guildIds,
+      });
       fetchGuilds();
-      setIncomingApps((prev) => ({
-        ...prev,
-        [guildId]: (prev[guildId] ?? []).filter((a) => a._id !== applicationId),
-      }));
     } else {
       addLog(data.error, "error");
     }
-    setReviewing(null);
+    setJoining(null);
   }
 
   async function createGuild(e: React.FormEvent) {
@@ -156,6 +93,7 @@ export default function GuildsPage() {
     setCreating(false);
   }
 
+  // Gate: Caster or Assassin form required
   const shadowForm = character?.shadowForm ?? null;
   if (user && character && shadowForm !== "caster" && shadowForm !== "assassin") {
     return (
@@ -165,6 +103,7 @@ export default function GuildsPage() {
         <div className="font-mono text-gray-500 text-sm max-w-xs leading-relaxed">
           Only the <span className="text-purple-400 font-bold">Caster</span> or{" "}
           <span className="text-violet-400 font-bold">Assassin</span> form may enter the Guild Hall.
+          Arcane minds and shadow operatives govern these halls.
         </div>
         <button
           onClick={() => router.push("/shadow-form")}
@@ -175,11 +114,6 @@ export default function GuildsPage() {
       </div>
     );
   }
-
-  const ledGuildIds = guilds
-    .filter((g) => g.leaderId._id === character?.id)
-    .map((g) => g._id);
-  const totalIncoming = ledGuildIds.reduce((n, id) => n + (incomingApps[id]?.length ?? 0), 0);
 
   return (
     <div className="space-y-4">
@@ -208,93 +142,42 @@ export default function GuildsPage() {
         </Card>
       )}
 
-      {/* Applications panel — shown to guild leaders */}
-      {totalIncoming > 0 && (
-        <Card title={`Pending Applications (${totalIncoming})`} accent="cyan">
-          <div className="space-y-3">
-            {ledGuildIds.map((gid) => {
-              const apps = incomingApps[gid] ?? [];
-              if (!apps.length) return null;
-              const guild = guilds.find((g) => g._id === gid);
-              return (
-                <div key={gid} className="space-y-2">
-                  {guild && (
-                    <p className="text-xs font-mono text-gray-600 uppercase tracking-widest">
-                      [{guild.tag}] {guild.name}
-                    </p>
-                  )}
-                  {apps.map((app) => (
-                    <div key={app._id} className="flex items-center justify-between gap-2 border border-gray-800 px-3 py-2">
-                      <span className="text-xs font-mono text-gray-300">{app.characterName}</span>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          loading={reviewing === app._id}
-                          onClick={() => reviewApp(gid, app._id, "accept")}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          loading={reviewing === app._id}
-                          onClick={() => reviewApp(gid, app._id, "reject")}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
       {loading ? (
         <p className="text-xs font-mono text-gray-600">Loading guilds...</p>
       ) : guilds.length === 0 ? (
         <p className="text-xs font-mono text-gray-600">No guilds yet. Be the first to create one!</p>
       ) : (
         <div className="space-y-2">
-          {guilds.map((g, i) => {
-            const isMember = (character?.guildIds ?? []).includes(g._id);
-            const pending  = myApps[g._id];
-            return (
-              <div key={g._id} className="border border-gray-800 bg-gray-950 p-4 flex items-center gap-4">
-                <div className="w-8 text-center text-xs font-mono text-gray-600">#{i + 1}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-gray-600">[{g.tag}]</span>
-                    <span className="text-sm font-mono font-medium text-gray-200">{g.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-0.5 truncate">{g.description || "No description."}</p>
-                  <div className="flex gap-4 mt-1 text-xs font-mono text-gray-600">
-                    <span>Leader: <span className="text-gray-400">{g.leaderId?.name}</span></span>
-                    <span>Members: <span className="text-gray-400">{g.members.length}</span></span>
-                    <span>Mars Rating: <span className="text-red-400">{g.marsRating}</span></span>
-                  </div>
+          {guilds.map((g, i) => (
+            <div key={g._id} className="border border-gray-800 bg-gray-950 p-4 flex items-center gap-4">
+              <div className="w-8 text-center text-xs font-mono text-gray-600">#{i + 1}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-gray-600">[{g.tag}]</span>
+                  <span className="text-sm font-mono font-medium text-gray-200">{g.name}</span>
                 </div>
-                {isMember && (
-                  <span className="text-xs font-mono text-cyan-500">[MEMBER]</span>
-                )}
-                {!isMember && pending && (
-                  <span className="text-xs font-mono text-yellow-500">[PENDING]</span>
-                )}
-                {!isMember && !pending && character && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={applying === g._id}
-                    onClick={() => applyToGuild(g._id)}
-                  >
-                    Apply
-                  </Button>
-                )}
+                <p className="text-xs text-gray-600 mt-0.5 truncate">{g.description || "No description."}</p>
+                <div className="flex gap-4 mt-1 text-xs font-mono text-gray-600">
+                  <span>Leader: <span className="text-gray-400">{g.leaderId?.name}</span></span>
+                  <span>Members: <span className="text-gray-400">{g.members.length}</span></span>
+                  <span>Mars Rating: <span className="text-red-400">{g.marsRating}</span></span>
+                </div>
               </div>
-            );
-          })}
+              {character && !(character.guildIds ?? []).includes(g._id) && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={joining === g._id}
+                  onClick={() => joinGuild(g._id)}
+                >
+                  Join
+                </Button>
+              )}
+              {(character?.guildIds ?? []).includes(g._id) && (
+                <span className="text-xs font-mono text-cyan-500">[MEMBER]</span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
