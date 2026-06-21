@@ -1,10 +1,11 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { connectDB } from "@/lib/db";
-import { signToken, createSessionCookie } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rateLimit";
 import { ok, err } from "@/lib/response";
+import { sendVerificationEmail } from "@/lib/email";
 import User from "@/models/User";
 
 export async function POST(req: NextRequest) {
@@ -32,12 +33,23 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await User.create({ username, email, passwordHash });
+  const verificationToken = randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60_000);
 
-  const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
-  const cookie = createSessionCookie(token);
+  const user = await User.create({
+    username,
+    email,
+    passwordHash,
+    verificationToken,
+    verificationTokenExpiry,
+    isVerified: false,
+  });
 
-  const response = ok({ message: "Account created successfully", userId: user._id }, 201);
-  response.headers.set("Set-Cookie", cookie);
-  return response;
+  const { devUrl } = await sendVerificationEmail(user.email, user.username, verificationToken, req.nextUrl.origin);
+
+  return ok({
+    message: "Account created. Please verify your email before logging in.",
+    needsVerification: true,
+    devUrl,
+  }, 201);
 }

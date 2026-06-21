@@ -3,22 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setUser = useGameStore((s) => s.setUser);
-  const setCharacter = useGameStore((s) => s.setCharacter);
 
   const [form, setForm] = useState({ username: "", email: "", password: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErrors({});
+    setError("");
     setLoading(true);
 
     try {
@@ -31,21 +28,15 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrors({ general: data.error ?? "Registration failed" });
+        setError(data.error ?? "Registration failed");
         return;
       }
 
-      // Fetch user info after registration
-      const me = await fetch("/api/auth/me");
-      if (me.ok) {
-        const meData = await me.json();
-        setUser(meData.data.user);
-        setCharacter(meData.data.character); // null at this point, clears any stale state
-      }
-
-      router.push("/character/create");
+      const params = new URLSearchParams({ email: form.email });
+      if (data.data.devUrl) params.set("devUrl", data.data.devUrl);
+      router.push(`/verify-prompt?${params}`);
     } catch {
-      setErrors({ general: "Connection error. Please try again." });
+      setError("Connection error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -100,13 +91,13 @@ export default function RegisterPage() {
             autoComplete="new-password"
           />
 
-          <div className="text-xs font-mono text-gray-700 space-y-0.5">
-            <p>Requirements: 8+ characters, 1 uppercase, 1 number</p>
+          <div className="text-xs font-mono text-gray-700">
+            Requirements: 8+ characters, 1 uppercase, 1 number
           </div>
 
-          {errors.general && (
+          {error && (
             <div className="border border-red-900 bg-red-950 p-2 text-xs font-mono text-red-400">
-              ERROR: {errors.general}
+              ERROR: {error}
             </div>
           )}
 

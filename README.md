@@ -12,6 +12,8 @@ cp .env.local.example .env.local   # set MONGODB_URI and JWT_SECRET
 npm run dev
 ```
 
+> **Email verification** is required for new registrations. Set `EMAIL_HOST`, `EMAIL_USER`, `EMAIL_PASS`, and `EMAIL_FROM` in `.env.local` for real delivery. Without them the server logs the verify link to the console **and** shows a clickable "Dev mode" link on the verify-prompt page — no email setup needed for local development.
+
 Then seed the database (creates all accounts, guilds, teams, missions):
 
 ```
@@ -81,6 +83,41 @@ Each form unlocks specific content. Choose your form at /shadow-form.
 | Junkyard Wolves | junkyard scavenging | Lyra |
 | Earth Reclamation | earth exploration | Kade |
 | Mars Vanguard | mars territory | Zara |
+
+---
+
+## Email Verification Setup
+
+New accounts require email verification before they can log in.
+
+### How it works
+
+1. Player registers → account created (`isVerified: false`) → verification email sent
+2. Player clicks the link in the email → `/api/auth/verify?token=xxx` → session issued → redirected to the game
+3. Unverified accounts are blocked at login with a helpful message
+4. The verify-prompt page has a **Resend** button in case the email is lost
+5. Google OAuth accounts are auto-verified (Google already verifies the email)
+6. Demo and seeded accounts are pre-verified (`isVerified: true`)
+
+### Email environment variables
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `EMAIL_HOST` | `smtp.gmail.com` | SMTP host (required for real email) |
+| `EMAIL_PORT` | `587` | SMTP port (default: 587) |
+| `EMAIL_SECURE` | `false` | Set `true` for port 465 TLS |
+| `EMAIL_USER` | `you@gmail.com` | SMTP username |
+| `EMAIL_PASS` | `app-password` | SMTP password or app password |
+| `EMAIL_FROM` | `DreameForge <noreply@dreamforge.com>` | Sender display name + address |
+
+> **Dev mode:** If `EMAIL_HOST` is not set, the server logs the verify URL to the console and shows it as a clickable link on the verify-prompt page. No SMTP configuration is needed for local development.
+
+### Gmail app password (quick setup)
+
+1. Enable 2FA on your Google account
+2. Go to **Account → Security → App passwords**
+3. Generate a password for "Mail"
+4. Set `EMAIL_HOST=smtp.gmail.com`, `EMAIL_PORT=587`, `EMAIL_USER=you@gmail.com`, `EMAIL_PASS=<app-password>`
 
 ---
 
@@ -170,7 +207,7 @@ Every account starts with 50 of each consumable. Items are shown as icons on the
 | 13% | **Poisoned** — −15 HP/sec for 4 hours. Visible in Character Panel with countdown. |
 | 19% | **Sudden death** — instant kill. |
 | 38% | **−50% HP** — current HP halved (min 1). |
-| 30% | **Double HP** — current HP doubled, capped at max HP. |
+| 30% | **Double HP** — current HP doubled. **Can exceed maxHealth** (displayed in yellow on the HP bar). |
 
 ### HP Regeneration
 
@@ -209,8 +246,10 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | Method | Route | Description |
 |--------|-------|-------------|
 | POST | /api/seed | Seed everything (idempotent) |
-| POST | /api/auth/register | Register new account |
-| POST | /api/auth/login | Login |
+| POST | /api/auth/register | Register new account (sends verification email) |
+| GET | /api/auth/verify | Verify email via token — sets session cookie, redirects to game |
+| POST | /api/auth/resend-verification | Resend verification email |
+| POST | /api/auth/login | Login (blocked until email is verified) |
 | POST | /api/auth/demo | One-click demo login |
 | POST | /api/auth/logout | Logout |
 | GET | /api/auth/me | Current session |
@@ -223,8 +262,11 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | GET | /api/market | List consumable items for sale with prices |
 | POST | /api/market/buy | Buy an item — deducts credits, adds to inventory |
 | GET/POST | /api/guilds | List guilds / create guild |
-| POST | /api/guilds/join | Join a guild (multi-guild supported) |
+| POST | /api/guilds/apply | Apply to join a guild (creates pending application) |
+| GET | /api/guilds/my-applications | Get current character's guild applications |
 | GET | /api/guilds/mine | Get guilds the current character belongs to |
+| GET | /api/guilds/[guildId]/applications | List pending applications (leader/officer only) |
+| POST | /api/guilds/[guildId]/applications/[id] | Accept or reject an application |
 | GET | /api/characters | Search characters by name (for owl compose) |
 | GET | /api/profile/[characterId] | Public character profile + viewer owl status |
 | POST | /api/owl/send | Dispatch shadow owl (10-min delivery, one owl at a time) |
@@ -285,9 +327,22 @@ Same as Team Telepathy but scoped to a guild. If a character belongs to **multip
 
 API: `GET /api/chat/guild?guildId=xxx` · `POST /api/chat/guild { content, guildId }`
 
+### Guild Applications
+
+Joining a guild is a two-step process — players **apply**, and guild leaders **approve or reject**.
+
+1. On the Guild Hall page click **Apply** next to any guild you're not already in
+2. The button changes to a **[PENDING]** badge while the application awaits review
+3. The guild **leader** (and officers) see a **Pending Applications** panel at the top of the Guild Hall
+4. Each application shows the applicant's name with **Accept** / **Reject** buttons
+5. Accepting adds the player to the guild immediately; rejecting removes the application
+6. Players can apply to multiple guilds simultaneously; each is tracked independently
+
+API: `POST /api/guilds/apply { guildId }` · `GET /api/guilds/[guildId]/applications` · `POST /api/guilds/[guildId]/applications/[id] { action: "accept"|"reject" }` · `GET /api/guilds/my-applications`
+
 ### Multiple Guild Membership
 
-Characters can now join **any number of guilds** simultaneously. The Join button stays active for guilds you haven't joined yet; a [MEMBER] badge shows for each guild you've already joined. Primary `guildId` (the first guild joined) is preserved for backward compatibility.
+Characters can belong to **any number of guilds** simultaneously. A [MEMBER] badge shows for each guild you've joined. Primary `guildId` (the first guild joined) is preserved for backward compatibility.
 
 ## Stack
 

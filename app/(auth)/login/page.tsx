@@ -16,6 +16,8 @@ const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   google_userinfo:       "Failed to retrieve Google account info.",
   google_no_email:       "Your Google account has no verified email address.",
   banned:                "Your account has been suspended.",
+  verify_invalid:        "Verification link is invalid or has expired. Request a new one below.",
+  verify_missing:        "No verification token provided.",
 };
 
 // useSearchParams must live inside a Suspense boundary in Next.js App Router

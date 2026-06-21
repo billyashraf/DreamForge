@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return err("Invalid email or password", 401);
 
+  if (!user.isVerified) {
+    return err("Email not verified. Check your inbox for the verification link, or use Resend on the register page.", 403);
+  }
+
   await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
   const character = await Character.findOne({ userId: user._id }).select(
