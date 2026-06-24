@@ -13,6 +13,23 @@ const LOCATION_LABELS: Record<string, string> = {
   mars: "Mars",
 };
 
+const RANK_META: Record<string, { symbol: string; label: string; color: string }> = {
+  king:      { symbol: "♔", label: "King",      color: "text-yellow-400" },
+  queen:     { symbol: "♛", label: "Queen",     color: "text-purple-400" },
+  rook:      { symbol: "♜", label: "Rook",      color: "text-orange-400" },
+  bishop:    { symbol: "♝", label: "Bishop",    color: "text-blue-400"   },
+  knight:    { symbol: "♞", label: "Knight",    color: "text-green-400"  },
+  pawn:      { symbol: "♟", label: "Pawn",      color: "text-gray-400"   },
+  saber:     { symbol: "◤", label: "Saber",     color: "text-red-400"    },
+  lancer:    { symbol: "◭", label: "Lancer",    color: "text-orange-400" },
+  rider:     { symbol: "◉", label: "Rider",     color: "text-yellow-400" },
+  caster:    { symbol: "✦", label: "Caster",    color: "text-purple-400" },
+  berserker: { symbol: "◈", label: "Berserker", color: "text-rose-500"   },
+  archer:    { symbol: "◎", label: "Archer",    color: "text-green-400"  },
+  assassin:  { symbol: "◆", label: "Assassin",  color: "text-violet-400" },
+  demon:     { symbol: "◈", label: "Demon",     color: "text-red-600"    },
+};
+
 const FORM_COLORS: Record<string, string> = {
   saber: "text-red-400",
   lancer: "text-orange-400",
@@ -36,7 +53,7 @@ interface ProfileData {
     isDead: boolean;
     merits: number;
   };
-  guilds: { _id: string; name: string; tag: string }[];
+  guilds: { _id: string; name: string; tag: string; positions: string[] }[];
   teamName: string | null;
   isOwn: boolean;
   viewerOwlAvailable: boolean;
@@ -193,11 +210,26 @@ export default function ProfilePage() {
           {guilds.length > 0 && (
             <div className="border-t border-gray-800 pt-3">
               <div className="text-xs font-mono text-gray-600 uppercase mb-1">Guilds</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-1.5">
                 {guilds.map((g) => (
-                  <span key={g._id} className="text-xs font-mono text-purple-400 border border-purple-900 px-2 py-0.5">
-                    [{g.tag}] {g.name}
-                  </span>
+                  <div key={g._id} className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-mono text-purple-400 border border-purple-900 px-2 py-0.5">
+                      [{g.tag}] {g.name}
+                    </span>
+                    {g.positions.length > 0 ? (
+                      g.positions.map((p) => {
+                        const meta = RANK_META[p];
+                        if (!meta) return null;
+                        return (
+                          <span key={p} className={`text-xs font-mono ${meta.color}`} title={meta.label}>
+                            {meta.symbol} {meta.label}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-xs font-mono text-gray-700">◌ Recruit</span>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

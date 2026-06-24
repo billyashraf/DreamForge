@@ -28,7 +28,7 @@ export async function GET(
 
   const [guilds, team] = await Promise.all([
     target.guildIds?.length
-      ? Guild.find({ _id: { $in: target.guildIds } }).select("name tag").lean()
+      ? Guild.find({ _id: { $in: target.guildIds } }).select("name tag leaderId memberPositions").lean()
       : Promise.resolve([]),
     target.teamId
       ? Team.findById(target.teamId).select("name").lean()
@@ -40,7 +40,13 @@ export async function GET(
 
   return ok({
     character: { ...target, _id: target._id.toString() },
-    guilds: guilds.map((g) => ({ _id: g._id.toString(), name: g.name, tag: g.tag })),
+    guilds: guilds.map((g) => {
+      const isLeader = g.leaderId.toString() === characterId;
+      const positions: string[] = isLeader
+        ? ["king"]
+        : (g.memberPositions ?? []).find((p) => p.memberId.toString() === characterId)?.positions ?? [];
+      return { _id: g._id.toString(), name: g.name, tag: g.tag, positions };
+    }),
     teamName: team ? (team as { name: string }).name : null,
     isOwn,
     viewerOwlAvailable: owlAvailable,

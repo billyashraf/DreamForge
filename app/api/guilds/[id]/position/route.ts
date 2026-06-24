@@ -46,13 +46,11 @@ export async function PATCH(
 
     const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
 
-    if (positions.length === 0) {
-      guild.memberPositions = guild.memberPositions.filter(
-        (p) => p.memberId.toString() !== memberId
-      ) as never;
-    } else if (existing) {
-      existing.positions = positions as never;
-    } else {
+    // Always filter out existing entry then re-push — avoids subdocument mutation issues
+    guild.memberPositions = guild.memberPositions.filter(
+      (p) => p.memberId.toString() !== memberId
+    ) as never;
+    if (positions.length > 0) {
       guild.memberPositions.push({ memberId: memberId as never, positions: positions as never });
     }
 
