@@ -6,14 +6,12 @@ import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-type GuildRank = "king" | "queen" | "rook" | "bishop" | "knight" | "pawn";
-
 interface GuildMember {
   _id: string;
   name: string;
   level: number;
   shadowForm: string | null;
-  rank: GuildRank;
+  rank: string;
   position: string | null;
 }
 
@@ -36,46 +34,55 @@ interface Application {
   appliedAt: string;
 }
 
-// ── Chess rank hierarchy (functional) ────────────────────────────────────────
-const RANK_META: Record<GuildRank, { piece: string; label: string; color: string }> = {
-  king:   { piece: "♔", label: "King",   color: "text-yellow-400" },
-  queen:  { piece: "♛", label: "Queen",  color: "text-purple-400" },
-  rook:   { piece: "♜", label: "Rook",   color: "text-red-400" },
-  bishop: { piece: "♝", label: "Bishop", color: "text-blue-400" },
-  knight: { piece: "♞", label: "Knight", color: "text-green-400" },
-  pawn:   { piece: "♟", label: "Pawn",   color: "text-gray-500" },
-};
-const PROMOTABLE_RANKS: GuildRank[] = ["queen", "rook", "bishop", "knight", "pawn"];
+// ── Single unified rank system ─────────────────────────────────────────────
+interface RankMeta { symbol: string; label: string; color: string; group: string }
 
-// ── Promotion positions (cosmetic titles) ─────────────────────────────────────
-interface PositionMeta { symbol: string; label: string; color: string; group: string }
-const POSITION_META: Record<string, PositionMeta> = {
+const RANK_META: Record<string, RankMeta> = {
   // Chess
-  king:      { symbol: "♔", label: "King",      color: "text-yellow-400",  group: "Chess" },
-  queen:     { symbol: "♛", label: "Queen",     color: "text-purple-400",  group: "Chess" },
-  rook:      { symbol: "♜", label: "Rook",      color: "text-orange-400",  group: "Chess" },
-  bishop:    { symbol: "♝", label: "Bishop",    color: "text-blue-400",    group: "Chess" },
-  knight:    { symbol: "♞", label: "Knight",    color: "text-green-400",   group: "Chess" },
-  pawn:      { symbol: "♟", label: "Pawn",      color: "text-gray-400",    group: "Chess" },
+  king:      { symbol: "♔", label: "King",      color: "text-yellow-400", group: "Chess"       },
+  queen:     { symbol: "♛", label: "Queen",     color: "text-purple-400", group: "Chess"       },
+  rook:      { symbol: "♜", label: "Rook",      color: "text-orange-400", group: "Chess"       },
+  bishop:    { symbol: "♝", label: "Bishop",    color: "text-blue-400",   group: "Chess"       },
+  knight:    { symbol: "♞", label: "Knight",    color: "text-green-400",  group: "Chess"       },
+  pawn:      { symbol: "♟", label: "Pawn",      color: "text-gray-400",   group: "Chess"       },
   // Shadow Forms
-  saber:     { symbol: "◤", label: "Saber",     color: "text-red-400",     group: "Shadow Form" },
-  lancer:    { symbol: "◭", label: "Lancer",    color: "text-orange-400",  group: "Shadow Form" },
-  rider:     { symbol: "◉", label: "Rider",     color: "text-yellow-400",  group: "Shadow Form" },
-  caster:    { symbol: "✦", label: "Caster",    color: "text-purple-400",  group: "Shadow Form" },
-  berserker: { symbol: "◈", label: "Berserker", color: "text-rose-500",    group: "Shadow Form" },
-  archer:    { symbol: "◎", label: "Archer",    color: "text-green-400",   group: "Shadow Form" },
-  assassin:  { symbol: "◆", label: "Assassin",  color: "text-violet-400",  group: "Shadow Form" },
+  saber:     { symbol: "◤", label: "Saber",     color: "text-red-400",    group: "Shadow Form" },
+  lancer:    { symbol: "◭", label: "Lancer",    color: "text-orange-400", group: "Shadow Form" },
+  rider:     { symbol: "◉", label: "Rider",     color: "text-yellow-400", group: "Shadow Form" },
+  caster:    { symbol: "✦", label: "Caster",    color: "text-purple-400", group: "Shadow Form" },
+  berserker: { symbol: "◈", label: "Berserker", color: "text-rose-500",   group: "Shadow Form" },
+  archer:    { symbol: "◎", label: "Archer",    color: "text-green-400",  group: "Shadow Form" },
+  assassin:  { symbol: "◆", label: "Assassin",  color: "text-violet-400", group: "Shadow Form" },
   // Special
-  demon:     { symbol: "◈", label: "Demon",     color: "text-red-600",     group: "Demon" },
+  demon:     { symbol: "◈", label: "Demon",     color: "text-red-600",    group: "Demon"       },
 };
 
-const POSITION_GROUPS = ["Chess", "Shadow Form", "Demon"] as const;
+const RANK_GROUPS = ["Chess", "Shadow Form", "Demon"] as const;
+// All assignable positions (leader's King is implicit — shown separately, not in picker)
+const ASSIGNABLE_RANKS = Object.entries(RANK_META)
+  .filter(([k]) => k !== "king")
+  .map(([k]) => k);
+
+const RECRUIT: RankMeta = { symbol: "◌", label: "Recruit", color: "text-gray-600", group: "" };
 
 const FORM_COLORS: Record<string, string> = {
   caster: "text-purple-400", assassin: "text-violet-400", saber: "text-red-400",
   lancer: "text-orange-400", rider: "text-yellow-400", berserker: "text-red-600",
   archer: "text-green-400",
 };
+
+// Sort members: leader first, then by rank priority, then by level
+const RANK_ORDER = ["king","queen","rook","bishop","knight","pawn","saber","lancer","rider","caster","berserker","archer","assassin","demon"];
+function sortMembers(members: GuildMember[], leaderId: string) {
+  return [...members].sort((a, b) => {
+    if (a._id === leaderId) return -1;
+    if (b._id === leaderId) return 1;
+    const aRank = a.position ? RANK_ORDER.indexOf(a.position) : 99;
+    const bRank = b.position ? RANK_ORDER.indexOf(b.position) : 99;
+    if (aRank !== bRank) return aRank - bRank;
+    return b.level - a.level;
+  });
+}
 
 async function safeJson(res: Response): Promise<{ ok: boolean; data?: Record<string, unknown>; error: string }> {
   try {
@@ -95,8 +102,8 @@ export default function GuildProfilePage() {
   const [members, setMembers] = useState<GuildMember[]>([]);
   const [isMember, setIsMember] = useState(false);
   const [isLeader, setIsLeader] = useState(false);
-  const [viewerRank, setViewerRank] = useState<GuildRank | null>(null);
   const [viewerCharId, setViewerCharId] = useState("");
+  const [viewerPosition, setViewerPosition] = useState<string | null>(null);
   const [hasApplied, setHasApplied] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,9 +111,7 @@ export default function GuildProfilePage() {
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [actingApp, setActingApp] = useState<string | null>(null);
-  const [actingRank, setActingRank] = useState<string | null>(null);
-  const [rankSelecting, setRankSelecting] = useState<string | null>(null);
-  const [positionSelecting, setPositionSelecting] = useState<string | null>(null);
+  const [promotingMember, setPromotingMember] = useState<string | null>(null);
   const [actingPosition, setActingPosition] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -127,12 +132,15 @@ export default function GuildProfilePage() {
     const { ok, data } = await safeJson(res);
     if (ok && data?.data) {
       const d = data.data as Record<string, unknown>;
-      setGuild(d.guild as GuildInfo);
-      setMembers(d.members as GuildMember[]);
+      const g = d.guild as GuildInfo;
+      const ms = d.members as GuildMember[];
+      setGuild(g);
+      setMembers(sortMembers(ms, g.leaderId));
       setIsMember(d.isMember as boolean);
       setIsLeader(d.isLeader as boolean);
-      setViewerRank(d.viewerRank as GuildRank | null);
       setViewerCharId(d.viewerCharId as string);
+      const viewer = ms.find(m => m._id === (d.viewerCharId as string));
+      setViewerPosition(viewer?.position ?? null);
       setHasApplied(d.hasApplied as boolean);
     }
     setLoading(false);
@@ -147,8 +155,8 @@ export default function GuildProfilePage() {
 
   useEffect(() => { fetchGuild(); }, [fetchGuild]);
   useEffect(() => {
-    if (isLeader || viewerRank === "queen") fetchApplications();
-  }, [isLeader, viewerRank, fetchApplications]);
+    if (isLeader || viewerPosition === "queen") fetchApplications();
+  }, [isLeader, viewerPosition, fetchApplications]);
 
   async function applyToGuild() {
     const message = prompt("Optional application message (leave blank to skip):") ?? "";
@@ -178,7 +186,7 @@ export default function GuildProfilePage() {
   }
 
   async function deleteGuild() {
-    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone and all members will be removed.`)) return;
+    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone.`)) return;
     setDeleting(true);
     const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
     const { ok, error } = await safeJson(res);
@@ -200,20 +208,6 @@ export default function GuildProfilePage() {
     if (ok) { fetchGuild(); fetchApplications(); }
   }
 
-  async function setMemberRank(memberId: string, rank: GuildRank) {
-    setActingRank(memberId);
-    const res = await fetch(`/api/guilds/${id}/rank`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId, rank }),
-    });
-    const { ok, data, error } = await safeJson(res);
-    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
-    setActingRank(null);
-    setRankSelecting(null);
-    if (ok) fetchGuild();
-  }
-
   async function setMemberPosition(memberId: string, position: string | null) {
     setActingPosition(memberId);
     const res = await fetch(`/api/guilds/${id}/position`, {
@@ -224,7 +218,7 @@ export default function GuildProfilePage() {
     const { ok, data, error } = await safeJson(res);
     setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
     setActingPosition(null);
-    setPositionSelecting(null);
+    setPromotingMember(null);
     if (ok) fetchGuild();
   }
 
@@ -234,14 +228,12 @@ export default function GuildProfilePage() {
     return (
       <div className="p-4 text-center">
         <p className="text-xs font-mono text-red-400">Guild not found.</p>
-        <button onClick={() => router.push("/guilds")} className="mt-3 text-xs font-mono text-gray-600 hover:text-gray-400 underline">
-          ← Back to guilds
-        </button>
+        <button onClick={() => router.push("/guilds")} className="mt-3 text-xs font-mono text-gray-600 hover:text-gray-400 underline">← Back to guilds</button>
       </div>
     );
   }
 
-  const canManage = isLeader || viewerRank === "queen";
+  const canManageApps = isLeader || viewerPosition === "queen";
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
@@ -249,7 +241,7 @@ export default function GuildProfilePage() {
         ← Guild Hall
       </button>
 
-      {/* Guild Header */}
+      {/* Header */}
       <div className="border border-gray-800 bg-gray-950 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -261,8 +253,19 @@ export default function GuildProfilePage() {
               <span>Level <span className="text-gray-400">{guild.level}</span></span>
               <span>Members <span className="text-gray-400">{members.length}</span></span>
               <span>Mars Rating <span className="text-red-400">{guild.marsRating}</span></span>
-              {viewerRank && (
-                <span>Your rank <span className={RANK_META[viewerRank].color}>{RANK_META[viewerRank].piece} {RANK_META[viewerRank].label}</span></span>
+              {isMember && (
+                <span>
+                  Your rank{" "}
+                  {isLeader ? (
+                    <span className="text-yellow-400">♔ King</span>
+                  ) : viewerPosition ? (
+                    <span className={RANK_META[viewerPosition]?.color ?? "text-gray-400"}>
+                      {RANK_META[viewerPosition]?.symbol} {RANK_META[viewerPosition]?.label}
+                    </span>
+                  ) : (
+                    <span className="text-gray-600">◌ Recruit</span>
+                  )}
+                </span>
               )}
             </div>
           </div>
@@ -297,8 +300,8 @@ export default function GuildProfilePage() {
         </div>
       )}
 
-      {/* Applications panel */}
-      {canManage && (
+      {/* Applications */}
+      {canManageApps && (
         <Card title={`Applications (${applications.length})`} accent="yellow">
           {applications.length === 0 ? (
             <p className="text-xs font-mono text-gray-600">No pending applications.</p>
@@ -326,20 +329,26 @@ export default function GuildProfilePage() {
         </Card>
       )}
 
-      {/* Members list */}
+      {/* Members */}
       <Card title={`Members — ${members.length}`} accent="cyan">
         <div className="space-y-1">
           {members.map((m) => {
-            const rm = RANK_META[m.rank];
-            const pm = m.position ? POSITION_META[m.position] : null;
-            const isPromoting = positionSelecting === m._id;
-            const isRanking = rankSelecting === m._id;
+            const isLeaderRow = m._id === guild.leaderId;
+            const rankMeta = isLeaderRow
+              ? RANK_META["king"]
+              : m.position
+              ? (RANK_META[m.position] ?? RECRUIT)
+              : RECRUIT;
+            const isPromoting = promotingMember === m._id;
 
             return (
               <div key={m._id} className="py-2.5 border-b border-gray-900 last:border-0">
-                {/* Main row */}
+                {/* Member row */}
                 <div className="flex items-center gap-3">
-                  <span className={`text-xl w-7 text-center ${rm.color}`} title={rm.label}>{rm.piece}</span>
+                  {/* Single rank badge */}
+                  <span className={`font-mono text-sm w-6 text-center shrink-0 ${rankMeta.color}`} title={rankMeta.label}>
+                    {rankMeta.symbol}
+                  </span>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -351,97 +360,74 @@ export default function GuildProfilePage() {
                       </span>
                       <span className="text-xs font-mono text-gray-600">Lv.{m.level}</span>
                       {m.shadowForm && (
-                        <span className={`text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>[{m.shadowForm}]</span>
-                      )}
-                      {pm && (
-                        <span className={`text-xs font-mono border px-1.5 py-0.5 ${pm.color} border-current/30`}>
-                          {pm.symbol} {pm.label}
+                        <span className={`text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>
+                          [{m.shadowForm}]
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <span className={`text-xs font-mono ${rm.color} hidden sm:block shrink-0`}>{rm.label}</span>
+                  {/* Rank label */}
+                  <span className={`text-xs font-mono shrink-0 hidden sm:block ${rankMeta.color}`}>
+                    {rankMeta.label}
+                  </span>
 
-                  {/* Leader controls */}
-                  {isLeader && m._id !== viewerCharId && (
-                    <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={() => { setRankSelecting(isRanking ? null : m._id); setPositionSelecting(null); }}
-                        className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors"
-                      >
-                        {isRanking ? "✕" : "Rank"}
-                      </button>
-                      <button
-                        onClick={() => { setPositionSelecting(isPromoting ? null : m._id); setRankSelecting(null); }}
-                        className="text-xs font-mono text-cyan-800 hover:text-cyan-500 transition-colors"
-                      >
-                        {isPromoting ? "✕" : "Promote"}
-                      </button>
-                    </div>
+                  {/* Leader: Promote button (not for self) */}
+                  {isLeader && !isLeaderRow && (
+                    <button
+                      onClick={() => setPromotingMember(isPromoting ? null : m._id)}
+                      className={`text-xs font-mono shrink-0 transition-colors ${
+                        isPromoting ? "text-cyan-500" : "text-gray-700 hover:text-cyan-600"
+                      }`}
+                    >
+                      {isPromoting ? "✕ Close" : "Promote"}
+                    </button>
                   )}
                 </div>
 
-                {/* Rank picker (inline, leader only) */}
-                {isLeader && isRanking && (
-                  <div className="mt-2 ml-10 flex gap-1 flex-wrap">
-                    {PROMOTABLE_RANKS.map((r) => {
-                      const meta = RANK_META[r];
-                      return (
-                        <button
-                          key={r}
-                          disabled={actingRank === m._id}
-                          onClick={() => setMemberRank(m._id, r)}
-                          className={`text-xs font-mono px-2 py-1 border transition-colors ${
-                            m.rank === r ? "border-gray-600 text-gray-400" : `border-gray-800 ${meta.color} hover:border-gray-600`
-                          }`}
-                          title={meta.label}
-                        >
-                          {meta.piece} {meta.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Position / Promotion picker (leader only) */}
+                {/* Promotion picker — only visible to leader, for this member */}
                 {isLeader && isPromoting && (
-                  <div className="mt-3 ml-10 space-y-3">
-                    {POSITION_GROUPS.map((group) => {
-                      const positions = Object.entries(POSITION_META).filter(([, v]) => v.group === group);
+                  <div className="mt-3 ml-9 space-y-4 pb-1">
+                    {RANK_GROUPS.map((group) => {
+                      const slots = Object.entries(RANK_META).filter(([k, v]) => v.group === group && k !== "king");
                       return (
                         <div key={group}>
-                          <p className={`text-xs font-mono uppercase tracking-widest mb-1.5 ${
+                          <p className={`text-xs font-mono uppercase tracking-widest mb-2 ${
                             group === "Demon" ? "text-red-700" : group === "Shadow Form" ? "text-violet-700" : "text-yellow-800"
                           }`}>
                             {group}
                           </p>
-                          <div className="flex flex-wrap gap-1">
-                            {positions.map(([posId, meta]) => (
-                              <button
-                                key={posId}
-                                disabled={actingPosition === m._id}
-                                onClick={() => setMemberPosition(m._id, m.position === posId ? null : posId)}
-                                className={`text-xs font-mono px-2 py-1 border transition-colors ${
-                                  m.position === posId
-                                    ? `border-current/50 ${meta.color} opacity-60`
-                                    : `border-gray-800 ${meta.color} hover:border-gray-600`
-                                } ${group === "Demon" ? "font-bold" : ""}`}
-                                title={m.position === posId ? "Click to remove" : meta.label}
-                              >
-                                {meta.symbol} {meta.label}
-                              </button>
-                            ))}
+                          <div className="flex flex-wrap gap-1.5">
+                            {slots.map(([posId, meta]) => {
+                              const isActive = m.position === posId;
+                              return (
+                                <button
+                                  key={posId}
+                                  disabled={actingPosition === m._id}
+                                  onClick={() => setMemberPosition(m._id, isActive ? null : posId)}
+                                  className={`text-xs font-mono px-2 py-1 border transition-colors ${
+                                    isActive
+                                      ? `border-current bg-gray-900 ${meta.color}`
+                                      : `border-gray-800 ${meta.color} hover:border-gray-600`
+                                  } ${group === "Demon" ? "font-bold" : ""}`}
+                                  title={isActive ? "Click to demote to Recruit" : `Set rank to ${meta.label}`}
+                                >
+                                  {meta.symbol} {meta.label}
+                                  {isActive && <span className="ml-1 opacity-50">✓</span>}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       );
                     })}
                     {m.position && (
                       <button
+                        disabled={actingPosition === m._id}
                         onClick={() => setMemberPosition(m._id, null)}
-                        className="text-xs font-mono text-gray-700 hover:text-gray-500"
+                        className="text-xs font-mono text-gray-700 hover:text-gray-500 transition-colors"
                       >
-                        Clear position
+                        ◌ Demote to Recruit
                       </button>
                     )}
                   </div>

@@ -44,20 +44,25 @@ export async function PATCH(
 
     if (!guild.memberPositions) guild.memberPositions = [];
 
-    const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
-
     if (position === null) {
+      // Clear rank → back to Recruit
       guild.memberPositions = guild.memberPositions.filter(
         (p) => p.memberId.toString() !== memberId
       ) as never;
-    } else if (existing) {
-      existing.position = position;
     } else {
-      guild.memberPositions.push({ memberId: memberId as never, position });
+      const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
+      if (existing) {
+        existing.position = position;
+      } else {
+        guild.memberPositions.push({ memberId: memberId as never, position });
+      }
     }
 
+    // Required — Mongoose won't detect mutations of nested array elements without this
+    guild.markModified("memberPositions");
     await guild.save();
-    return ok({ message: position ? `Position set to ${position}` : "Position cleared" });
+
+    return ok({ message: position ? `Rank set to ${position}` : "Rank cleared — now Recruit" });
   } catch (e) {
     console.error("[position]", e);
     return err("Server error", 500);

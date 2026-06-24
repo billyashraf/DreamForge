@@ -13,12 +13,12 @@ async function resolveLeaderOrQueen(guildId: string, userId: string) {
   if (!guild || !character) return { guild: null, character: null, authorized: false };
 
   if (!guild.applications) guild.applications = [];
-  if (!guild.memberRanks) guild.memberRanks = [];
+  if (!guild.memberPositions) guild.memberPositions = [];
 
   const charIdStr = character._id.toString();
   const isLeader = guild.leaderId.toString() === charIdStr;
-  const isQueen = guild.memberRanks.some(
-    (r) => r.memberId.toString() === charIdStr && r.rank === "queen"
+  const isQueen = guild.memberPositions.some(
+    (p) => p.memberId.toString() === charIdStr && p.position === "queen"
   );
   return { guild, character, authorized: isLeader || isQueen };
 }
