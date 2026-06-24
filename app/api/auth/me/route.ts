@@ -15,7 +15,7 @@ export async function GET() {
   if (!user) return unauthorized();
 
   const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId guildIds owlReturnAt teamId lastEnergyRegen lastHealthRegen shadowForm merits pain maxPain madness lastPainUpdate lastMadnessUpdate isDead poisonedUntil lastPoisonTick"
+    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId guildIds teamId teamIds owlReturnAt lastEnergyRegen lastHealthRegen shadowForm merits pain maxPain madness lastPainUpdate lastMadnessUpdate isDead poisonedUntil lastPoisonTick"
   );
 
   if (character) {
