@@ -158,6 +158,16 @@ export default function AdminUsersPage() {
                             Promote
                           </Button>
                         )}
+                        {user?.role === "admin" && u.role === "moderator" && (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            loading={acting === u._id + "setRole"}
+                            onClick={() => applyAction(u._id, "setRole", { role: "player" })}
+                          >
+                            Demote
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

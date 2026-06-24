@@ -1,11 +1,26 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
+export type GuildRank = "queen" | "rook" | "bishop" | "knight" | "pawn";
+
+export interface IMemberRank {
+  memberId: Types.ObjectId;
+  rank: GuildRank;
+}
+
+export interface IGuildApplication {
+  characterId: Types.ObjectId;
+  message: string;
+  appliedAt: Date;
+}
+
 export interface IGuild extends Document {
   name: string;
   tag: string;
   leaderId: Types.ObjectId;
   officers: Types.ObjectId[];
   members: Types.ObjectId[];
+  memberRanks: IMemberRank[];
+  applications: IGuildApplication[];
   description: string;
   level: number;
   credits: number;
@@ -20,6 +35,21 @@ const GuildSchema = new Schema<IGuild>(
     leaderId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
     officers: [{ type: Schema.Types.ObjectId, ref: "Character" }],
     members: [{ type: Schema.Types.ObjectId, ref: "Character" }],
+    memberRanks: [
+      {
+        memberId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
+        rank: { type: String, enum: ["queen", "rook", "bishop", "knight", "pawn"], default: "pawn" },
+        _id: false,
+      },
+    ],
+    applications: [
+      {
+        characterId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
+        message: { type: String, default: "", maxlength: 300 },
+        appliedAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
     description: { type: String, default: "", maxlength: 500 },
     level: { type: Number, default: 1 },
     credits: { type: Number, default: 0 },

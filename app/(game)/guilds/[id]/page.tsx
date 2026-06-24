@@ -1,0 +1,406 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useGameStore } from "@/store/useGameStore";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
+type GuildRank = "king" | "queen" | "rook" | "bishop" | "knight" | "pawn";
+
+interface GuildMember {
+  _id: string;
+  name: string;
+  level: number;
+  shadowForm: string | null;
+  rank: GuildRank;
+}
+
+interface GuildInfo {
+  _id: string;
+  name: string;
+  tag: string;
+  description: string;
+  marsRating: number;
+  level: number;
+  leaderId: string;
+}
+
+interface Application {
+  characterId: string;
+  name: string;
+  level: number;
+  shadowForm: string | null;
+  message: string;
+  appliedAt: string;
+}
+
+const RANK_META: Record<GuildRank, { piece: string; label: string; color: string }> = {
+  king:   { piece: "♔", label: "King",   color: "text-yellow-400" },
+  queen:  { piece: "♛", label: "Queen",  color: "text-purple-400" },
+  rook:   { piece: "♜", label: "Rook",   color: "text-red-400" },
+  bishop: { piece: "♝", label: "Bishop", color: "text-blue-400" },
+  knight: { piece: "♞", label: "Knight", color: "text-green-400" },
+  pawn:   { piece: "♟", label: "Pawn",   color: "text-gray-500" },
+};
+
+const PROMOTABLE_RANKS: GuildRank[] = ["queen", "rook", "bishop", "knight", "pawn"];
+
+const FORM_COLORS: Record<string, string> = {
+  caster:    "text-purple-400",
+  assassin:  "text-violet-400",
+  saber:     "text-red-400",
+  lancer:    "text-orange-400",
+  rider:     "text-yellow-400",
+  berserker: "text-red-600",
+  archer:    "text-green-400",
+};
+
+async function safeJson(res: Response): Promise<{ ok: boolean; data?: Record<string, unknown>; error: string }> {
+  try {
+    const data = await res.json();
+    return { ok: res.ok, data, error: data?.error ?? "Unknown error" };
+  } catch {
+    return { ok: false, error: `Server error (${res.status})` };
+  }
+}
+
+export default function GuildProfilePage() {
+  const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const { user, character, setUser, setCharacter } = useGameStore();
+
+  const [guild, setGuild] = useState<GuildInfo | null>(null);
+  const [members, setMembers] = useState<GuildMember[]>([]);
+  const [isMember, setIsMember] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
+  const [viewerRank, setViewerRank] = useState<GuildRank | null>(null);
+  const [viewerCharId, setViewerCharId] = useState("");
+  const [hasApplied, setHasApplied] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [actingApp, setActingApp] = useState<string | null>(null);
+  const [actingRank, setActingRank] = useState<string | null>(null);
+  const [rankSelecting, setRankSelecting] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      fetch("/api/auth/me").then(async (r) => {
+        if (!r.ok) { router.push("/login"); return; }
+        const d = await r.json();
+        setUser(d.data.user);
+        setCharacter(d.data.character);
+      });
+    }
+  }, [user, router, setUser, setCharacter]);
+
+  const fetchGuild = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch(`/api/guilds/${id}`);
+    const { ok, data } = await safeJson(res);
+    if (ok && data?.data) {
+      const d = data.data as Record<string, unknown>;
+      setGuild(d.guild as GuildInfo);
+      setMembers(d.members as GuildMember[]);
+      setIsMember(d.isMember as boolean);
+      setIsLeader(d.isLeader as boolean);
+      setViewerRank(d.viewerRank as GuildRank | null);
+      setViewerCharId(d.viewerCharId as string);
+      setHasApplied(d.hasApplied as boolean);
+    }
+    setLoading(false);
+  }, [id]);
+
+  const fetchApplications = useCallback(async () => {
+    const res = await fetch(`/api/guilds/${id}/applications`);
+    const { ok, data } = await safeJson(res);
+    if (ok && data?.data) {
+      setApplications((data.data as { applications: Application[] }).applications);
+    }
+  }, [id]);
+
+  useEffect(() => { fetchGuild(); }, [fetchGuild]);
+
+  useEffect(() => {
+    if (isLeader || viewerRank === "queen") fetchApplications();
+  }, [isLeader, viewerRank, fetchApplications]);
+
+  async function applyToGuild() {
+    const message = prompt("Optional application message (leave blank to skip):") ?? "";
+    setApplying(true);
+    const res = await fetch(`/api/guilds/${id}/apply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    const { ok, data, error } = await safeJson(res);
+    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    if (ok) fetchGuild();
+    setApplying(false);
+  }
+
+  async function leaveGuild() {
+    if (!confirm("Are you sure you want to leave this guild?")) return;
+    setLeaving(true);
+    const res = await fetch(`/api/guilds/${id}/leave`, { method: "POST" });
+    const { ok, data, error } = await safeJson(res);
+    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    if (ok) {
+      fetchGuild();
+      setCharacter(character ? { ...character, guildIds: (character.guildIds as unknown as string[]).filter((g) => g !== id) as never } : character);
+    }
+    setLeaving(false);
+  }
+
+  async function handleApplication(characterId: string, action: "accept" | "reject") {
+    setActingApp(characterId + action);
+    const res = await fetch(`/api/guilds/${id}/applications`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterId, action }),
+    });
+    const { ok, data, error } = await safeJson(res);
+    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    setActingApp(null);
+    if (ok) { fetchGuild(); fetchApplications(); }
+  }
+
+  async function setMemberRank(memberId: string, rank: GuildRank) {
+    setActingRank(memberId);
+    const res = await fetch(`/api/guilds/${id}/rank`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId, rank }),
+    });
+    const { ok, data, error } = await safeJson(res);
+    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    setActingRank(null);
+    setRankSelecting(null);
+    if (ok) fetchGuild();
+  }
+
+  if (loading) {
+    return <p className="text-xs font-mono text-gray-600 p-4">Loading guild...</p>;
+  }
+
+  if (!guild) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-xs font-mono text-red-400">Guild not found.</p>
+        <button onClick={() => router.push("/guilds")} className="mt-3 text-xs font-mono text-gray-600 hover:text-gray-400 underline">
+          ← Back to guilds
+        </button>
+      </div>
+    );
+  }
+
+  const canManage = isLeader || viewerRank === "queen";
+
+  return (
+    <div className="space-y-4 max-w-3xl mx-auto">
+      {/* Back link */}
+      <button
+        onClick={() => router.push("/guilds")}
+        className="text-xs font-mono text-gray-600 hover:text-gray-400 transition-colors"
+      >
+        ← Guild Hall
+      </button>
+
+      {/* Guild Header */}
+      <div className="border border-gray-800 bg-gray-950 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-xs font-mono text-gray-600 border border-gray-700 px-2 py-0.5">[{guild.tag}]</span>
+              <h1 className="text-2xl font-mono font-bold text-gray-100">{guild.name}</h1>
+            </div>
+            <div className="flex flex-wrap gap-4 text-xs font-mono text-gray-600 mt-2">
+              <span>Level <span className="text-gray-400">{guild.level}</span></span>
+              <span>Members <span className="text-gray-400">{members.length}</span></span>
+              <span>Mars Rating <span className="text-red-400">{guild.marsRating}</span></span>
+              {viewerRank && (
+                <span>
+                  Your rank{" "}
+                  <span className={RANK_META[viewerRank].color}>
+                    {RANK_META[viewerRank].piece} {RANK_META[viewerRank].label}
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 shrink-0">
+            {!isMember && !hasApplied && (
+              <Button size="sm" variant="secondary" loading={applying} onClick={applyToGuild}>
+                Apply to Join
+              </Button>
+            )}
+            {hasApplied && !isMember && (
+              <span className="text-xs font-mono text-yellow-500 border border-yellow-900 px-3 py-1.5">
+                Application Pending
+              </span>
+            )}
+            {isMember && !isLeader && (
+              <Button size="sm" variant="danger" loading={leaving} onClick={leaveGuild}>
+                Leave Guild
+              </Button>
+            )}
+            {isLeader && (
+              <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">
+                ♔ Guild Leader
+              </span>
+            )}
+          </div>
+        </div>
+
+        {guild.description && (
+          <p className="mt-4 text-sm font-mono text-gray-400 leading-relaxed border-t border-gray-800 pt-4">
+            {guild.description}
+          </p>
+        )}
+      </div>
+
+      {/* Status message */}
+      {msg && (
+        <div
+          className={`text-xs font-mono p-2 border ${
+            msg.ok ? "border-green-800 text-green-400" : "border-red-800 text-red-400"
+          }`}
+        >
+          {msg.text}
+        </div>
+      )}
+
+      {/* Applications panel — leader / queen only */}
+      {canManage && (
+        <Card title={`Applications (${applications.length})`} accent="yellow">
+          {applications.length === 0 ? (
+            <p className="text-xs font-mono text-gray-600">No pending applications.</p>
+          ) : (
+            <div className="space-y-3">
+              {applications.map((app) => (
+                <div key={app.characterId} className="border border-gray-800 p-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-gray-200">{app.name}</span>
+                      <span className="text-xs font-mono text-gray-600">Lv.{app.level}</span>
+                      {app.shadowForm && (
+                        <span className={`text-xs font-mono ${FORM_COLORS[app.shadowForm] ?? "text-gray-500"}`}>
+                          [{app.shadowForm}]
+                        </span>
+                      )}
+                    </div>
+                    {app.message && (
+                      <p className="text-xs text-gray-500 mt-1 italic">"{app.message}"</p>
+                    )}
+                    <p className="text-xs text-gray-700 mt-0.5">
+                      {new Date(app.appliedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="success"
+                      loading={actingApp === app.characterId + "accept"}
+                      onClick={() => handleApplication(app.characterId, "accept")}
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={actingApp === app.characterId + "reject"}
+                      onClick={() => handleApplication(app.characterId, "reject")}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Members list */}
+      <Card title={`Members — ${members.length}`} accent="cyan">
+        <div className="space-y-1">
+          {members.map((m) => {
+            const rm = RANK_META[m.rank];
+            return (
+              <div
+                key={m._id}
+                className="flex items-center gap-3 py-2 border-b border-gray-900 last:border-0"
+              >
+                <span className={`text-xl w-7 text-center ${rm.color}`} title={rm.label}>
+                  {rm.piece}
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-sm font-mono text-gray-200 hover:text-cyan-400 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/profile/${m._id}`)}
+                    >
+                      {m.name}
+                    </span>
+                    <span className="text-xs font-mono text-gray-600">Lv.{m.level}</span>
+                    {m.shadowForm && (
+                      <span className={`text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>
+                        [{m.shadowForm}]
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <span className={`text-xs font-mono ${rm.color} hidden sm:block`}>{rm.label}</span>
+
+                {isLeader && m._id !== viewerCharId && (
+                  <div className="relative">
+                    {rankSelecting === m._id ? (
+                      <div className="flex gap-1 flex-wrap">
+                        {PROMOTABLE_RANKS.map((r) => {
+                          const rMeta = RANK_META[r];
+                          return (
+                            <button
+                              key={r}
+                              disabled={actingRank === m._id}
+                              onClick={() => setMemberRank(m._id, r)}
+                              className={`text-xs font-mono px-1.5 py-0.5 border transition-colors ${
+                                m.rank === r
+                                  ? "border-gray-600 text-gray-400"
+                                  : `border-gray-800 ${rMeta.color} hover:border-gray-600`
+                              }`}
+                              title={rMeta.label}
+                            >
+                              {rMeta.piece}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => setRankSelecting(null)}
+                          className="text-xs font-mono text-gray-700 hover:text-gray-500 px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRankSelecting(m._id)}
+                        className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors"
+                      >
+                        Set rank
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
