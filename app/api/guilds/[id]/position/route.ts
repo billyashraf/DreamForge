@@ -31,8 +31,8 @@ export async function PATCH(
     await connectDB();
 
     const [guild, viewer] = await Promise.all([
-      Guild.findById(id),
-      Character.findOne({ userId: session.userId }).select("_id"),
+      Guild.findById(id).lean(),
+      Character.findOne({ userId: session.userId }).select("_id").lean(),
     ]);
 
     if (!guild) return err("Guild not found", 404);
@@ -42,22 +42,19 @@ export async function PATCH(
     const isMember = guild.members.some((m) => m.toString() === memberId);
     if (!isMember) return err("That character is not a member of this guild");
 
-    if (!guild.memberPositions) guild.memberPositions = [];
+    // Build the new full array in memory, then write it atomically via $set.
+    // This bypasses Mongoose ODM change tracking entirely — no markModified needed.
+    const kept = (guild.memberPositions ?? [])
+      .filter((p) => p.memberId.toString() !== memberId)
+      .map((p) => ({ memberId: p.memberId, positions: Array.from(p.positions as string[]) }));
 
-    const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
-
-    // Always filter out existing entry then re-push — avoids subdocument mutation issues
-    guild.memberPositions = guild.memberPositions.filter(
-      (p) => p.memberId.toString() !== memberId
-    ) as never;
     if (positions.length > 0) {
-      guild.memberPositions.push({ memberId: memberId as never, positions: positions as never });
+      kept.push({ memberId: memberId as never, positions });
     }
 
-    guild.markModified("memberPositions");
-    await guild.save();
+    await Guild.updateOne({ _id: id }, { $set: { memberPositions: kept } });
 
-    return ok({ message: positions.length ? `Ranks updated` : "Ranks cleared — Recruit" });
+    return ok({ message: positions.length ? "Ranks updated" : "Ranks cleared — Recruit" });
   } catch (e) {
     console.error("[position]", e);
     return err("Server error", 500);
