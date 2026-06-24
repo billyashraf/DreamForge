@@ -24,39 +24,51 @@ export async function POST(req: NextRequest) {
 
   const { email, password } = parsed.data;
 
-  await connectDB();
-
-  const user = await User.findOne({ email });
-  if (!user) return err("Invalid email or password", 401);
-
-  if (user.isBanned) {
-    return err(`Account suspended. Reason: ${user.banReason ?? "Policy violation"}`, 403);
+  try {
+    await connectDB();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[login] connectDB failed:", msg);
+    return err(`Database unavailable: ${msg}`, 503);
   }
 
-  if (!user.passwordHash) {
-    return err("This account was created with Google sign-in. Use the 'Sign in with Google' button.", 400);
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return err("Invalid email or password", 401);
+
+    if (user.isBanned) {
+      return err(`Account suspended. Reason: ${user.banReason ?? "Policy violation"}`, 403);
+    }
+
+    if (!user.passwordHash) {
+      return err("This account was created with Google sign-in. Use the 'Sign in with Google' button.", 400);
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return err("Invalid email or password", 401);
+
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    const character = await Character.findOne({ userId: user._id }).select(
+      "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm merits pain maxPain madness lastPainUpdate"
+    );
+
+    const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
+    const cookie = createSessionCookie(token);
+
+    const response = ok({
+      message: "Login successful",
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+      hasCharacter: !!character,
+      character: character
+        ? { id: character._id.toString(), ...character.toObject() }
+        : null,
+    });
+    response.headers.set("Set-Cookie", cookie);
+    return response;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[login] error:", msg);
+    return err(`Server error: ${msg}`, 500);
   }
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return err("Invalid email or password", 401);
-
-  await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-  const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm merits pain maxPain madness lastPainUpdate"
-  );
-
-  const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
-  const cookie = createSessionCookie(token);
-
-  const response = ok({
-    message: "Login successful",
-    user: { id: user._id, username: user.username, email: user.email, role: user.role },
-    hasCharacter: !!character,
-    character: character
-      ? { id: character._id.toString(), ...character.toObject() }
-      : null,
-  });
-  response.headers.set("Set-Cookie", cookie);
-  return response;
 }

@@ -25,36 +25,42 @@ export async function POST(req: NextRequest) {
     return err(`Database unavailable: ${msg}`, 503);
   }
 
-  let user = await User.findOne({ email: creds.email });
-  if (!user) {
-    await seed();
-    user = await User.findOne({ email: creds.email });
-    if (!user) return err("Demo account setup failed.", 500);
+  try {
+    let user = await User.findOne({ email: creds.email });
+    if (!user) {
+      await seed();
+      user = await User.findOne({ email: creds.email });
+      if (!user) return err("Demo account setup failed.", 500);
+    }
+
+    if (user.isBanned) return err("Demo account is currently disabled.", 403);
+
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    const character = await Character.findOne({ userId: user._id }).select(
+      "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm merits pain maxPain madness lastPainUpdate"
+    );
+
+    const token = signToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
+    const cookie = createSessionCookie(token);
+
+    const response = ok({
+      message: `Logged in as demo ${type}`,
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+      hasCharacter: !!character,
+      character: character
+        ? { id: character._id.toString(), ...character.toObject() }
+        : null,
+    });
+    response.headers.set("Set-Cookie", cookie);
+    return response;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[demo] error:", msg);
+    return err(`Server error: ${msg}`, 500);
   }
-
-  if (user.isBanned) return err("Demo account is currently disabled.", 403);
-
-  await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-  const character = await Character.findOne({ userId: user._id }).select(
-    "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId teamId lastEnergyRegen shadowForm merits pain maxPain madness lastPainUpdate"
-  );
-
-  const token = signToken({
-    userId: user._id.toString(),
-    email: user.email,
-    role: user.role,
-  });
-  const cookie = createSessionCookie(token);
-
-  const response = ok({
-    message: `Logged in as demo ${type}`,
-    user: { id: user._id, username: user.username, email: user.email, role: user.role },
-    hasCharacter: !!character,
-    character: character
-      ? { id: character._id.toString(), ...character.toObject() }
-      : null,
-  });
-  response.headers.set("Set-Cookie", cookie);
-  return response;
 }

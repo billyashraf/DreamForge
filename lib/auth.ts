@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
 const COOKIE_NAME = "dreamforge_token";
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is not set");
+function getSecret(): string {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET environment variable is not set");
+  return s;
 }
 
 export interface JWTPayload {
@@ -17,12 +18,12 @@ export interface JWTPayload {
 }
 
 export function signToken(payload: Omit<JWTPayload, "iat" | "exp">): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, getSecret(), { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    return jwt.verify(token, getSecret()) as JWTPayload;
   } catch {
     return null;
   }
