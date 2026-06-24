@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
 import Team from "@/models/Team";
 import Character from "@/models/Character";
+import { createLog } from "@/lib/log";
 
 export async function POST(
   _req: NextRequest,
@@ -37,6 +38,9 @@ export async function POST(
       character.teamId = (character.teamIds[0] ?? undefined) as never;
 
     await Promise.all([team.save(), character.save()]);
+
+    await createLog(character._id, "team_left", `Left team "${team.name}"`);
+
     return ok({ message: `You left team "${team.name}"` });
   } catch (e) {
     console.error("[team leave]", e);

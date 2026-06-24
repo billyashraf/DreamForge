@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
+import { createLog } from "@/lib/log";
 
 export async function POST(
   _req: NextRequest,
@@ -49,6 +50,12 @@ export async function POST(
     }
 
     await Promise.all([guild.save(), character.save()]);
+
+    await createLog(
+      character._id,
+      "guild_left",
+      `Left guild [${guild.tag}] ${guild.name}`
+    );
 
     return ok({ message: `You left [${guild.tag}] ${guild.name}` });
   } catch (e) {

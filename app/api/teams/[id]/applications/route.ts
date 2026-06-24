@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import Team from "@/models/Team";
 import Character from "@/models/Character";
+import { createLog } from "@/lib/log";
+import Notification from "@/models/Notification";
 
 async function resolveLeader(teamId: string, userId: string) {
   const [team, character] = await Promise.all([
@@ -98,6 +100,24 @@ export async function PATCH(
   }
 
   await team.save();
+
+  const notifType = action === "accept" ? "team_app_accepted" : "team_app_rejected";
+  const logType = action === "accept" ? "team_app_accepted" : "team_app_rejected";
+  const logMsg = action === "accept"
+    ? `Application to team "${team.name}" was accepted`
+    : `Application to team "${team.name}" was rejected`;
+
+  await Promise.all([
+    Notification.create({
+      recipientId: characterId,
+      type: notifType,
+      entityId: team._id,
+      entityName: team.name,
+      status: "pending",
+    }),
+    createLog(characterId, logType, logMsg),
+  ]);
+
   return ok({
     message: action === "accept"
       ? "Application accepted — player joined the team"

@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
+import { createLog } from "@/lib/log";
+import Notification from "@/models/Notification";
 
 async function resolveLeaderOrQueen(guildId: string, userId: string) {
   const [guild, character] = await Promise.all([
@@ -104,6 +106,28 @@ export async function PATCH(
   }
 
   await guild.save();
+
+  const applicantChar = action === "accept"
+    ? await Character.findById(characterId).select("_id").lean()
+    : { _id: characterId };
+
+  const notifType = action === "accept" ? "guild_app_accepted" : "guild_app_rejected";
+  const logType = action === "accept" ? "guild_app_accepted" : "guild_app_rejected";
+  const logMsg = action === "accept"
+    ? `Application to guild [${guild.tag}] ${guild.name} was accepted`
+    : `Application to guild [${guild.tag}] ${guild.name} was rejected`;
+
+  await Promise.all([
+    Notification.create({
+      recipientId: characterId,
+      type: notifType,
+      entityId: guild._id,
+      entityName: guild.name,
+      entityTag: guild.tag,
+      status: "pending",
+    }),
+    createLog(applicantChar?._id ?? characterId, logType, logMsg),
+  ]);
 
   return ok({
     message: action === "accept"

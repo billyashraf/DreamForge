@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized } from "@/lib/response";
 import Team from "@/models/Team";
 import Character from "@/models/Character";
+import { createLog } from "@/lib/log";
 
 export async function POST(
   req: NextRequest,
@@ -49,6 +50,12 @@ export async function POST(
       appliedAt: new Date(),
     });
     await team.save();
+
+    await createLog(
+      applicant._id,
+      "team_applied",
+      `Applied to team "${team.name}"`
+    );
 
     return ok({ message: `Application sent to team "${team.name}"` });
   } catch (e) {

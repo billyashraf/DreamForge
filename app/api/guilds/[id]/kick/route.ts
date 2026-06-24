@@ -2,8 +2,10 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
+import { createLog } from "@/lib/log";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
+import Notification from "@/models/Notification";
 
 export async function POST(
   req: NextRequest,
@@ -40,13 +42,26 @@ export async function POST(
     ) as never;
     guild.markModified("memberPositions");
 
-    const target = await Character.findById(memberId).select("guildIds guildId");
+    const target = await Character.findById(memberId).select("_id guildIds guildId");
     if (target) {
       target.guildIds = (target.guildIds ?? []).filter((g) => g.toString() !== id) as never;
       if (target.guildId?.toString() === id) {
         target.guildId = (target.guildIds[0] ?? null) as never;
       }
       await target.save();
+
+      await Promise.all([
+        createLog(target._id, "guild_kicked", `Kicked from guild [${guild.tag}] ${guild.name}`),
+        createLog(viewer._id, "guild_kick_issued", `Kicked a member from guild [${guild.tag}] ${guild.name}`),
+        Notification.create({
+          recipientId: target._id,
+          type: "guild_kick",
+          entityId: guild._id,
+          entityName: guild.name,
+          entityTag: guild.tag,
+          status: "pending",
+        }),
+      ]);
     }
 
     await guild.save();

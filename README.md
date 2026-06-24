@@ -247,7 +247,12 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | POST | /api/teams/[id]/kick | Kick a member (leader only) |
 | GET/PATCH | /api/teams/[id]/applications | List / accept or reject applications |
 | GET | /api/people | Browse all players (search, paginated) |
-| POST | /api/people/invite | Direct-add player to your guild or team |
+| POST | /api/people/invite | Send guild or team invite notification to a player |
+| GET | /api/notifications | List all notifications for current player |
+| GET | /api/notifications/unread | Unread notification count (used for badge) |
+| POST | /api/notifications/[id]/accept | Accept a guild or team invite |
+| POST | /api/notifications/[id]/decline | Decline a guild or team invite |
+| GET | /api/logs | Activity log for current player (paginated) |
 | GET | /api/curse-tree | Get curse tree data |
 | POST | /api/curse-tree | Upgrade/boost curse skill |
 | GET | /api/academy | Get academy tree data |
@@ -385,9 +390,45 @@ The `/people` page lets any logged-in player browse all characters in the game.
 
 - Search by name
 - See each player's level, shadow form, current location, guilds, and teams
-- **Invite** — if you lead a guild or team, an **Invite** button appears per player opening a panel listing your led guilds and teams; clicking one immediately adds them
+- **Invite** — if you lead a guild or team, an **Invite** button appears per player; clicking sends a notification invite (the target must Accept or Decline — they are not added immediately)
 
 API: `GET /api/people?search=&page=` · `POST /api/people/invite { targetCharacterId, entityId, type: "guild"|"team" }`
+
+### Notifications
+
+A real-time notification system alerts players to events that affect them.
+
+**Notification bell (◉)** in the top-right navbar:
+- Shows a red badge with the unread count (polls every 15 seconds)
+- **First click** — opens a popup with the 5 most recent notifications
+- **Second click** — navigates to `/notifications` (full page)
+
+**Notification types:**
+
+| Type | Description | Action required |
+|------|-------------|-----------------|
+| Guild Invite | Another player invited you to their guild | Accept / Decline |
+| Team Invite | Another player invited you to their team | Accept / Decline |
+| Application Accepted | Your guild or team application was accepted | Informational |
+| Application Rejected | Your guild or team application was rejected | Informational |
+| Removed from Guild | You were kicked from a guild | Informational |
+| Removed from Team | You were kicked from a team | Informational |
+
+Informational notifications are automatically marked read when the notification list is fetched.
+
+API: `GET /api/notifications` · `GET /api/notifications/unread` · `POST /api/notifications/[id]/accept` · `POST /api/notifications/[id]/decline`
+
+### Activity Log
+
+Every significant action a player takes (or that happens to them) is recorded in a persistent activity log.
+
+**Log icon (▤)** in the top-right navbar:
+- **First click** — opens a popup with the 5 most recent entries
+- **Second click** — navigates to `/logs` (full paginated page, 20 entries per page)
+
+**Logged events:** guild/team apply, join, leave, kick (both sides), invite sent/accepted/declined, application accepted/rejected.
+
+API: `GET /api/logs?page=N`
 
 #### Admin Guild Management
 

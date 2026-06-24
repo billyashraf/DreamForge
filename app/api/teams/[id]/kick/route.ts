@@ -2,8 +2,10 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
+import { createLog } from "@/lib/log";
 import Team from "@/models/Team";
 import Character from "@/models/Character";
+import Notification from "@/models/Notification";
 
 export async function POST(
   req: NextRequest,
@@ -35,12 +37,24 @@ export async function POST(
 
     team.members = team.members.filter((m) => m.toString() !== memberId) as never;
 
-    const target = await Character.findById(memberId).select("teamIds teamId");
+    const target = await Character.findById(memberId).select("_id teamIds teamId");
     if (target) {
       target.teamIds = (target.teamIds ?? []).filter((t) => t.toString() !== id) as never;
       if (target.teamId?.toString() === id)
         target.teamId = (target.teamIds[0] ?? undefined) as never;
       await target.save();
+
+      await Promise.all([
+        createLog(target._id, "team_kicked", `Kicked from team "${team.name}"`),
+        createLog(viewer._id, "team_kick_issued", `Kicked a member from team "${team.name}"`),
+        Notification.create({
+          recipientId: target._id,
+          type: "team_kick",
+          entityId: team._id,
+          entityName: team.name,
+          status: "pending",
+        }),
+      ]);
     }
 
     await team.save();
