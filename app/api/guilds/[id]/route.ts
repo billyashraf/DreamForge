@@ -26,32 +26,32 @@ export async function GET(
     .select("name level shadowForm")
     .lean();
 
-  const rankMap = new Map(
-    (guild.memberRanks ?? []).map((r) => [r.memberId.toString(), r.rank as string])
-  );
   const positionMap = new Map(
-    (guild.memberPositions ?? []).map((p) => [p.memberId.toString(), p.position as string])
+    (guild.memberPositions ?? []).map((p) => [p.memberId.toString(), (p.positions ?? []) as string[]])
   );
   const leaderIdStr = guild.leaderId.toString();
 
   const members = memberDocs.map((m) => {
     const idStr = m._id.toString();
-    const rank = idStr === leaderIdStr ? "king" : (rankMap.get(idStr) ?? "pawn");
-    const position = positionMap.get(idStr) ?? null;
-    return { _id: idStr, name: m.name, level: m.level, shadowForm: m.shadowForm, rank, position };
+    const positions = idStr === leaderIdStr ? [] : (positionMap.get(idStr) ?? []);
+    return { _id: idStr, name: m.name, level: m.level, shadowForm: m.shadowForm, positions };
   });
 
+  // Sort: leader first, then queen holders, then by level
+  const RANK_ORDER = ["queen","rook","bishop","knight","pawn","saber","lancer","rider","caster","berserker","archer","assassin","demon"];
   members.sort((a, b) => {
-    const order = ["king", "queen", "rook", "bishop", "knight", "pawn"];
-    return order.indexOf(a.rank) - order.indexOf(b.rank);
+    if (a._id === leaderIdStr) return -1;
+    if (b._id === leaderIdStr) return 1;
+    const aTop = a.positions.length ? RANK_ORDER.indexOf(a.positions[0]) : 99;
+    const bTop = b.positions.length ? RANK_ORDER.indexOf(b.positions[0]) : 99;
+    if (aTop !== bTop) return aTop - bTop;
+    return b.level - a.level;
   });
 
   const viewerCharId = viewer?._id.toString() ?? "";
   const isMember = memberIds.includes(viewerCharId);
   const isLeader = leaderIdStr === viewerCharId;
-  const viewerRank = isLeader
-    ? "king"
-    : (rankMap.get(viewerCharId) ?? (isMember ? "pawn" : null));
+  const viewerPositions = positionMap.get(viewerCharId) ?? [];
 
   const hasApplied = (guild.applications ?? []).some(
     (a) => a.characterId.toString() === viewerCharId
@@ -71,8 +71,8 @@ export async function GET(
     members,
     isMember,
     isLeader,
-    viewerRank,
     viewerCharId,
+    viewerPositions,
     hasApplied,
   });
 }

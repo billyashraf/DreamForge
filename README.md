@@ -223,8 +223,15 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | GET | /api/market | List consumable items for sale with prices |
 | POST | /api/market/buy | Buy an item — deducts credits, adds to inventory |
 | GET/POST | /api/guilds | List guilds / create guild |
-| POST | /api/guilds/join | Join a guild (multi-guild supported) |
-| GET | /api/guilds/mine | Get guilds the current character belongs to |
+| GET | /api/guilds/mine | Owned and joined guilds (two sections) |
+| GET | /api/guilds/[id] | Guild profile with members and positions |
+| DELETE | /api/guilds/[id] | Disband guild (leader only) |
+| POST | /api/guilds/[id]/apply | Apply to join |
+| POST | /api/guilds/[id]/leave | Leave a guild |
+| POST | /api/guilds/[id]/kick | Kick a member (leader only) |
+| PATCH | /api/guilds/[id]/position | Set member positions array (max 3) |
+| GET/PATCH | /api/guilds/[id]/applications | Review applications |
+| GET/PATCH | /api/admin/guilds | Admin: list / suspend / delete guilds |
 | GET | /api/characters | Search characters by name (for owl compose) |
 | GET | /api/profile/[characterId] | Public character profile + viewer owl status |
 | POST | /api/owl/send | Dispatch shadow owl (10-min delivery, one owl at a time) |
@@ -285,9 +292,68 @@ Same as Team Telepathy but scoped to a guild. If a character belongs to **multip
 
 API: `GET /api/chat/guild?guildId=xxx` · `POST /api/chat/guild { content, guildId }`
 
-### Multiple Guild Membership
+### Guild System
 
-Characters can now join **any number of guilds** simultaneously. The Join button stays active for guilds you haven't joined yet; a [MEMBER] badge shows for each guild you've already joined. Primary `guildId` (the first guild joined) is preserved for backward compatibility.
+DreameForge features a full guild system with an **application flow**, **chess + shadow ranking**, and **multi-guild membership**.
+
+#### Joining Guilds
+
+Players **apply** to guilds rather than joining directly. Each application can include an optional message. The guild leader (or any member with the **Queen** position) reviews applications and accepts or rejects them.
+
+Limits:
+- Create up to **10 guilds** (as leader)
+- Join up to **49 guilds** (as member)
+
+#### Guild Hall & My Guilds
+
+The `/guilds` page has a sub-navbar:
+- **Guild Hall** — browse all active guilds, apply to join
+- **My Guilds** — two sections: *Owned (led guilds)* and *Joined (member guilds)*
+
+#### Position System
+
+Guild leaders can assign up to **3 simultaneous positions** per member. Positions are cosmetic titles shown as Unicode symbols next to member names. There are three groups:
+
+| Group | Positions |
+|-------|-----------|
+| Chess | ♛ Queen · ♜ Rook · ♝ Bishop · ♞ Knight · ♟ Pawn |
+| Shadow Form | Saber · Lancer · Rider · Caster · Berserker · Archer · Assassin |
+| Demon | Demon (shown in red) |
+
+The leader is always **♔ King**. Members without a position are **Recruit**.
+
+Position changes apply instantly (optimistic UI, no page reload). The Queen position grants permission to review and accept/reject applications.
+
+#### Leader Controls
+
+- **Promote** — open the position picker per member (multi-select, up to 3)
+- **Kick** — remove a member from the guild immediately
+- **Disband** — delete the guild (removes all members)
+
+#### Admin Guild Management
+
+Admins and moderators can manage all guilds at `/admin/guilds`:
+- Search by name or tag
+- **Suspend** a guild (hides it from the Guild Hall)
+- **Unsuspend** a guild
+- **Delete** a guild (admin only — removes all members permanently)
+
+API: `GET /api/admin/guilds` · `PATCH /api/admin/guilds { guildId, action: "suspend"|"unsuspend"|"delete" }`
+
+#### Guild API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET/POST | /api/guilds | List guilds / create guild |
+| GET | /api/guilds/mine | Owned and joined guilds |
+| GET | /api/guilds/[id] | Guild profile + members with positions |
+| DELETE | /api/guilds/[id] | Disband guild (leader only) |
+| POST | /api/guilds/[id]/apply | Apply to join a guild |
+| POST | /api/guilds/[id]/leave | Leave a guild |
+| POST | /api/guilds/[id]/kick | Kick a member (leader only) |
+| PATCH | /api/guilds/[id]/position | Set member positions (array, max 3) |
+| GET/PATCH | /api/guilds/[id]/applications | List / accept or reject applications |
+| GET/PATCH | /api/admin/guilds | Admin: list all guilds / suspend/delete |
 
 ## Stack
 

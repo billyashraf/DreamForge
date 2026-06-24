@@ -5,11 +5,10 @@ import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
 
-const VALID_POSITIONS = [
+const VALID_POSITIONS = new Set([
   "king","queen","rook","bishop","knight","pawn",
-  "saber","lancer","rider","caster","berserker","archer","assassin",
-  "demon",
-] as const;
+  "saber","lancer","rider","caster","berserker","archer","assassin","demon",
+]);
 
 export async function PATCH(
   req: NextRequest,
@@ -23,10 +22,11 @@ export async function PATCH(
     const body = await req.json().catch(() => null);
     if (!body?.memberId) return err("memberId required");
 
-    const { memberId, position } = body;
+    const { memberId, positions } = body as { memberId: string; positions: string[] };
 
-    if (position !== null && !VALID_POSITIONS.includes(position))
-      return err("Invalid position");
+    if (!Array.isArray(positions)) return err("positions must be an array");
+    if (positions.length > 3) return err("Maximum 3 positions per member");
+    if (positions.some((p) => !VALID_POSITIONS.has(p))) return err("Invalid position in list");
 
     await connectDB();
 
@@ -44,25 +44,22 @@ export async function PATCH(
 
     if (!guild.memberPositions) guild.memberPositions = [];
 
-    if (position === null) {
-      // Clear rank → back to Recruit
+    const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
+
+    if (positions.length === 0) {
       guild.memberPositions = guild.memberPositions.filter(
         (p) => p.memberId.toString() !== memberId
       ) as never;
+    } else if (existing) {
+      existing.positions = positions as never;
     } else {
-      const existing = guild.memberPositions.find((p) => p.memberId.toString() === memberId);
-      if (existing) {
-        existing.position = position;
-      } else {
-        guild.memberPositions.push({ memberId: memberId as never, position });
-      }
+      guild.memberPositions.push({ memberId: memberId as never, positions: positions as never });
     }
 
-    // Required — Mongoose won't detect mutations of nested array elements without this
     guild.markModified("memberPositions");
     await guild.save();
 
-    return ok({ message: position ? `Rank set to ${position}` : "Rank cleared — now Recruit" });
+    return ok({ message: positions.length ? `Ranks updated` : "Ranks cleared — Recruit" });
   } catch (e) {
     console.error("[position]", e);
     return err("Server error", 500);

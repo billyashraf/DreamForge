@@ -18,7 +18,7 @@ async function resolveLeaderOrQueen(guildId: string, userId: string) {
   const charIdStr = character._id.toString();
   const isLeader = guild.leaderId.toString() === charIdStr;
   const isQueen = guild.memberPositions.some(
-    (p) => p.memberId.toString() === charIdStr && p.position === "queen"
+    (p) => p.memberId.toString() === charIdStr && (p.positions ?? []).includes("queen" as never)
   );
   return { guild, character, authorized: isLeader || isQueen };
 }

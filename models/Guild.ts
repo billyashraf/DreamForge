@@ -14,7 +14,7 @@ export interface IMemberRank {
 
 export interface IMemberPosition {
   memberId: Types.ObjectId;
-  position: GuildPosition;
+  positions: GuildPosition[];
 }
 
 export interface IGuildApplication {
@@ -36,8 +36,14 @@ export interface IGuild extends Document {
   level: number;
   credits: number;
   marsRating: number;
+  isSuspended: boolean;
   createdAt: Date;
 }
+
+const POSITION_ENUM = [
+  "king","queen","rook","bishop","knight","pawn",
+  "saber","lancer","rider","caster","berserker","archer","assassin","demon",
+];
 
 const GuildSchema = new Schema<IGuild>(
   {
@@ -56,10 +62,7 @@ const GuildSchema = new Schema<IGuild>(
     memberPositions: [
       {
         memberId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
-        position: {
-          type: String,
-          enum: ["king","queen","rook","bishop","knight","pawn","saber","lancer","rider","caster","berserker","archer","assassin","demon"],
-        },
+        positions: [{ type: String, enum: POSITION_ENUM }],
         _id: false,
       },
     ],
@@ -75,6 +78,7 @@ const GuildSchema = new Schema<IGuild>(
     level: { type: Number, default: 1 },
     credits: { type: Number, default: 0 },
     marsRating: { type: Number, default: 0 },
+    isSuspended: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

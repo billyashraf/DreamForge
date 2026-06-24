@@ -10,9 +10,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside className="w-48 border-r border-gray-800 p-4 space-y-1">
           <div className="text-xs font-mono text-red-600 uppercase tracking-widest mb-3">Admin Panel</div>
           {[
-            { label: "Overview", href: "/admin" },
-            { label: "Users", href: "/admin/users" },
-            { label: "Missions", href: "/admin/missions" },
+            { label: "Overview",  href: "/admin" },
+            { label: "Users",     href: "/admin/users" },
+            { label: "Missions",  href: "/admin/missions" },
+            { label: "Guilds",    href: "/admin/guilds" },
           ].map((link) => (
             <a
               key={link.href}

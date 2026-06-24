@@ -12,7 +12,7 @@ export async function GET() {
 
   await connectDB();
 
-  const guilds = await Guild.find()
+  const guilds = await Guild.find({ isSuspended: { $ne: true } })
     .sort({ marsRating: -1 })
     .limit(20)
     .populate("leaderId", "name level");
