@@ -41,10 +41,11 @@ export interface ICharacter extends Document {
   itemCooldowns: { itemKey: string; expiresAt: Date }[];
   guildId?: Types.ObjectId;
   guildIds: Types.ObjectId[];
+  teamId?: Types.ObjectId;
+  teamIds: Types.ObjectId[];
   owlReturnAt?: Date;
   lastTeamMessage?: Date;
   lastGuildMessage?: Date;
-  teamId?: Types.ObjectId;
   activeMissions: Types.ObjectId[];
   completedMissions: Types.ObjectId[];
   lastEnergyRegen?: Date;
@@ -108,6 +109,7 @@ const CharacterSchema = new Schema<ICharacter>(
     lastTeamMessage: { type: Date },
     lastGuildMessage: { type: Date },
     teamId: { type: Schema.Types.ObjectId, ref: "Team" },
+    teamIds: [{ type: Schema.Types.ObjectId, ref: "Team" }],
     activeMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     completedMissions: [{ type: Schema.Types.ObjectId, ref: "Mission" }],
     lastEnergyRegen: { type: Date },

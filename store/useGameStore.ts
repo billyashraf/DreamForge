@@ -42,6 +42,7 @@ interface CharacterState {
   guildIds?: string[];
   owlReturnAt?: string | null;
   teamId?: string | null;
+  teamIds?: string[];
   lastEnergyRegen?: string | null;
   lastHealthRegen?: string | null;
   pain?: number;

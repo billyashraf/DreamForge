@@ -44,6 +44,7 @@ export function Navbar() {
             </span>
           )}
           <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
+          <Link href="/people" className="hover:text-gray-200 transition-colors">People</Link>
 
           {/* Commit Log — Lancer / Assassin */}
           {canCommitLog ? (

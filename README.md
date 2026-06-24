@@ -238,7 +238,16 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 | GET | /api/owl/inbox | Inbox of delivered messages + sent messages |
 | GET/POST | /api/chat/team | Team telepathy live chat |
 | GET/POST | /api/chat/guild | Guild echo live chat |
-| GET/POST | /api/teams | List teams / create team |
+| GET/POST | /api/teams | List open teams / create team |
+| GET | /api/teams/mine | My teams (owned and joined) |
+| GET | /api/teams/[id] | Team profile with members |
+| DELETE | /api/teams/[id] | Disband team (leader only) |
+| POST | /api/teams/[id]/apply | Apply to join a team |
+| POST | /api/teams/[id]/leave | Leave a team |
+| POST | /api/teams/[id]/kick | Kick a member (leader only) |
+| GET/PATCH | /api/teams/[id]/applications | List / accept or reject applications |
+| GET | /api/people | Browse all players (search, paginated) |
+| POST | /api/people/invite | Direct-add player to your guild or team |
 | GET | /api/curse-tree | Get curse tree data |
 | POST | /api/curse-tree | Upgrade/boost curse skill |
 | GET | /api/academy | Get academy tree data |
@@ -329,6 +338,56 @@ Position changes apply instantly (optimistic UI, no page reload). The Queen posi
 - **Promote** — open the position picker per member (multi-select, up to 3)
 - **Kick** — remove a member from the guild immediately
 - **Disband** — delete the guild (removes all members)
+
+### Team System
+
+DreameForge features a full team system that mirrors the guild system with an **application flow** and **multi-team membership**.
+
+#### Joining Teams
+
+Players **apply** to teams (with an optional message) or can be **directly invited** by a team leader via the People page. The team leader reviews applications and accepts or rejects them.
+
+Limits:
+- Create up to **5 teams** (as leader)
+- Join up to **19 teams** (as member)
+- Each team capacity: 2–6 players (set by the leader at creation)
+
+#### Team Hall & My Teams
+
+The `/teams` page has a sub-navbar:
+- **Team Hall** — browse all open teams, apply to join
+- **My Teams** — two sections: *Leading (owned teams)* and *Joined (member teams)*
+
+Clicking a team name opens its **profile page** (`/teams/[id]`) showing members, and (for the leader) pending applications with accept/reject buttons.
+
+#### Leader Controls
+
+- **Accept / Reject** — review applications from the team profile page
+- **Kick** — remove a member
+- **Disband** — delete the team (removes all members)
+
+#### Team API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET/POST | /api/teams | List open teams / create team |
+| GET | /api/teams/mine | My teams (owned and joined) |
+| GET | /api/teams/[id] | Team profile + members |
+| DELETE | /api/teams/[id] | Disband team (leader only) |
+| POST | /api/teams/[id]/apply | Apply to join |
+| POST | /api/teams/[id]/leave | Leave a team |
+| POST | /api/teams/[id]/kick | Kick a member (leader only) |
+| GET/PATCH | /api/teams/[id]/applications | List / accept or reject applications |
+
+### People
+
+The `/people` page lets any logged-in player browse all characters in the game.
+
+- Search by name
+- See each player's level, shadow form, current location, guilds, and teams
+- **Invite** — if you lead a guild or team, an **Invite** button appears per player opening a panel listing your led guilds and teams; clicking one immediately adds them
+
+API: `GET /api/people?search=&page=` · `POST /api/people/invite { targetCharacterId, entityId, type: "guild"|"team" }`
 
 #### Admin Guild Management
 

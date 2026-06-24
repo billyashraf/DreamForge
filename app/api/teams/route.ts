@@ -1,4 +1,4 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { teamCreateSchema } from "@/lib/validations";
@@ -12,12 +12,10 @@ export async function GET() {
 
   await connectDB();
 
-  const character = await Character.findOne({ userId: session.userId });
-  if (!character) return err("Character not found", 404);
-
   const teams = await Team.find({ isOpen: true })
     .populate("leaderId", "name level currentLocation")
-    .limit(20);
+    .sort({ createdAt: -1 })
+    .limit(30);
 
   return ok({ teams });
 }
@@ -37,7 +35,11 @@ export async function POST(req: NextRequest) {
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
 
-  if (character.teamId) return err("You are already in a team. Leave first.");
+  const ledCount = await Team.countDocuments({ leaderId: character._id });
+  if (ledCount >= 5) return err("You can lead a maximum of 5 teams");
+
+  if ((character.teamIds ?? []).length >= 19)
+    return err("You have reached the maximum of 19 team memberships");
 
   const team = await Team.create({
     name: parsed.data.name,
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
   });
 
   character.teamId = team._id as never;
+  character.teamIds = [...(character.teamIds ?? []), team._id as never];
   await character.save();
 
   return ok({ message: `Team "${team.name}" created!`, team }, 201);
