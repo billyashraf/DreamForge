@@ -14,6 +14,7 @@ interface GuildMember {
   level: number;
   shadowForm: string | null;
   rank: GuildRank;
+  position: string | null;
 }
 
 interface GuildInfo {
@@ -35,6 +36,7 @@ interface Application {
   appliedAt: string;
 }
 
+// ── Chess rank hierarchy (functional) ────────────────────────────────────────
 const RANK_META: Record<GuildRank, { piece: string; label: string; color: string }> = {
   king:   { piece: "♔", label: "King",   color: "text-yellow-400" },
   queen:  { piece: "♛", label: "Queen",  color: "text-purple-400" },
@@ -43,17 +45,36 @@ const RANK_META: Record<GuildRank, { piece: string; label: string; color: string
   knight: { piece: "♞", label: "Knight", color: "text-green-400" },
   pawn:   { piece: "♟", label: "Pawn",   color: "text-gray-500" },
 };
-
 const PROMOTABLE_RANKS: GuildRank[] = ["queen", "rook", "bishop", "knight", "pawn"];
 
+// ── Promotion positions (cosmetic titles) ─────────────────────────────────────
+interface PositionMeta { symbol: string; label: string; color: string; group: string }
+const POSITION_META: Record<string, PositionMeta> = {
+  // Chess
+  king:      { symbol: "♔", label: "King",      color: "text-yellow-400",  group: "Chess" },
+  queen:     { symbol: "♛", label: "Queen",     color: "text-purple-400",  group: "Chess" },
+  rook:      { symbol: "♜", label: "Rook",      color: "text-orange-400",  group: "Chess" },
+  bishop:    { symbol: "♝", label: "Bishop",    color: "text-blue-400",    group: "Chess" },
+  knight:    { symbol: "♞", label: "Knight",    color: "text-green-400",   group: "Chess" },
+  pawn:      { symbol: "♟", label: "Pawn",      color: "text-gray-400",    group: "Chess" },
+  // Shadow Forms
+  saber:     { symbol: "◤", label: "Saber",     color: "text-red-400",     group: "Shadow Form" },
+  lancer:    { symbol: "◭", label: "Lancer",    color: "text-orange-400",  group: "Shadow Form" },
+  rider:     { symbol: "◉", label: "Rider",     color: "text-yellow-400",  group: "Shadow Form" },
+  caster:    { symbol: "✦", label: "Caster",    color: "text-purple-400",  group: "Shadow Form" },
+  berserker: { symbol: "◈", label: "Berserker", color: "text-rose-500",    group: "Shadow Form" },
+  archer:    { symbol: "◎", label: "Archer",    color: "text-green-400",   group: "Shadow Form" },
+  assassin:  { symbol: "◆", label: "Assassin",  color: "text-violet-400",  group: "Shadow Form" },
+  // Special
+  demon:     { symbol: "◈", label: "Demon",     color: "text-red-600",     group: "Demon" },
+};
+
+const POSITION_GROUPS = ["Chess", "Shadow Form", "Demon"] as const;
+
 const FORM_COLORS: Record<string, string> = {
-  caster:    "text-purple-400",
-  assassin:  "text-violet-400",
-  saber:     "text-red-400",
-  lancer:    "text-orange-400",
-  rider:     "text-yellow-400",
-  berserker: "text-red-600",
-  archer:    "text-green-400",
+  caster: "text-purple-400", assassin: "text-violet-400", saber: "text-red-400",
+  lancer: "text-orange-400", rider: "text-yellow-400", berserker: "text-red-600",
+  archer: "text-green-400",
 };
 
 async function safeJson(res: Response): Promise<{ ok: boolean; data?: Record<string, unknown>; error: string }> {
@@ -85,6 +106,8 @@ export default function GuildProfilePage() {
   const [actingApp, setActingApp] = useState<string | null>(null);
   const [actingRank, setActingRank] = useState<string | null>(null);
   const [rankSelecting, setRankSelecting] = useState<string | null>(null);
+  const [positionSelecting, setPositionSelecting] = useState<string | null>(null);
+  const [actingPosition, setActingPosition] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
@@ -118,13 +141,11 @@ export default function GuildProfilePage() {
   const fetchApplications = useCallback(async () => {
     const res = await fetch(`/api/guilds/${id}/applications`);
     const { ok, data } = await safeJson(res);
-    if (ok && data?.data) {
+    if (ok && data?.data)
       setApplications((data.data as { applications: Application[] }).applications);
-    }
   }, [id]);
 
   useEffect(() => { fetchGuild(); }, [fetchGuild]);
-
   useEffect(() => {
     if (isLeader || viewerRank === "queen") fetchApplications();
   }, [isLeader, viewerRank, fetchApplications]);
@@ -143,19 +164,6 @@ export default function GuildProfilePage() {
     setApplying(false);
   }
 
-  async function deleteGuild() {
-    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone and all members will be removed.`)) return;
-    setDeleting(true);
-    const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
-    const { ok, data, error } = await safeJson(res);
-    if (ok) {
-      router.push("/guilds");
-    } else {
-      setMsg({ text: error ?? (data?.error as string), ok: false });
-    }
-    setDeleting(false);
-  }
-
   async function leaveGuild() {
     if (!confirm("Are you sure you want to leave this guild?")) return;
     setLeaving(true);
@@ -167,6 +175,16 @@ export default function GuildProfilePage() {
       setCharacter(character ? { ...character, guildIds: (character.guildIds as unknown as string[]).filter((g) => g !== id) as never } : character);
     }
     setLeaving(false);
+  }
+
+  async function deleteGuild() {
+    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone and all members will be removed.`)) return;
+    setDeleting(true);
+    const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
+    const { ok, error } = await safeJson(res);
+    if (ok) router.push("/guilds");
+    else setMsg({ text: error, ok: false });
+    setDeleting(false);
   }
 
   async function handleApplication(characterId: string, action: "accept" | "reject") {
@@ -196,9 +214,21 @@ export default function GuildProfilePage() {
     if (ok) fetchGuild();
   }
 
-  if (loading) {
-    return <p className="text-xs font-mono text-gray-600 p-4">Loading guild...</p>;
+  async function setMemberPosition(memberId: string, position: string | null) {
+    setActingPosition(memberId);
+    const res = await fetch(`/api/guilds/${id}/position`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId, position }),
+    });
+    const { ok, data, error } = await safeJson(res);
+    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    setActingPosition(null);
+    setPositionSelecting(null);
+    if (ok) fetchGuild();
   }
+
+  if (loading) return <p className="text-xs font-mono text-gray-600 p-4">Loading guild...</p>;
 
   if (!guild) {
     return (
@@ -215,11 +245,7 @@ export default function GuildProfilePage() {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
-      {/* Back link */}
-      <button
-        onClick={() => router.push("/guilds")}
-        className="text-xs font-mono text-gray-600 hover:text-gray-400 transition-colors"
-      >
+      <button onClick={() => router.push("/guilds")} className="text-xs font-mono text-gray-600 hover:text-gray-400 transition-colors">
         ← Guild Hall
       </button>
 
@@ -236,44 +262,28 @@ export default function GuildProfilePage() {
               <span>Members <span className="text-gray-400">{members.length}</span></span>
               <span>Mars Rating <span className="text-red-400">{guild.marsRating}</span></span>
               {viewerRank && (
-                <span>
-                  Your rank{" "}
-                  <span className={RANK_META[viewerRank].color}>
-                    {RANK_META[viewerRank].piece} {RANK_META[viewerRank].label}
-                  </span>
-                </span>
+                <span>Your rank <span className={RANK_META[viewerRank].color}>{RANK_META[viewerRank].piece} {RANK_META[viewerRank].label}</span></span>
               )}
             </div>
           </div>
           <div className="flex flex-col gap-2 shrink-0">
             {!isMember && !hasApplied && (
-              <Button size="sm" variant="secondary" loading={applying} onClick={applyToGuild}>
-                Apply to Join
-              </Button>
+              <Button size="sm" variant="secondary" loading={applying} onClick={applyToGuild}>Apply to Join</Button>
             )}
             {hasApplied && !isMember && (
-              <span className="text-xs font-mono text-yellow-500 border border-yellow-900 px-3 py-1.5">
-                Application Pending
-              </span>
+              <span className="text-xs font-mono text-yellow-500 border border-yellow-900 px-3 py-1.5">Application Pending</span>
             )}
             {isMember && !isLeader && (
-              <Button size="sm" variant="danger" loading={leaving} onClick={leaveGuild}>
-                Leave Guild
-              </Button>
+              <Button size="sm" variant="danger" loading={leaving} onClick={leaveGuild}>Leave Guild</Button>
             )}
             {isLeader && (
               <>
-                <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">
-                  ♔ Guild Leader
-                </span>
-                <Button size="sm" variant="danger" loading={deleting} onClick={deleteGuild}>
-                  Disband Guild
-                </Button>
+                <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">♔ Guild Leader</span>
+                <Button size="sm" variant="danger" loading={deleting} onClick={deleteGuild}>Disband Guild</Button>
               </>
             )}
           </div>
         </div>
-
         {guild.description && (
           <p className="mt-4 text-sm font-mono text-gray-400 leading-relaxed border-t border-gray-800 pt-4">
             {guild.description}
@@ -281,18 +291,13 @@ export default function GuildProfilePage() {
         )}
       </div>
 
-      {/* Status message */}
       {msg && (
-        <div
-          className={`text-xs font-mono p-2 border ${
-            msg.ok ? "border-green-800 text-green-400" : "border-red-800 text-red-400"
-          }`}
-        >
+        <div className={`text-xs font-mono p-2 border ${msg.ok ? "border-green-800 text-green-400" : "border-red-800 text-red-400"}`}>
           {msg.text}
         </div>
       )}
 
-      {/* Applications panel — leader / queen only */}
+      {/* Applications panel */}
       {canManage && (
         <Card title={`Applications (${applications.length})`} accent="yellow">
           {applications.length === 0 ? (
@@ -305,36 +310,14 @@ export default function GuildProfilePage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-mono text-gray-200">{app.name}</span>
                       <span className="text-xs font-mono text-gray-600">Lv.{app.level}</span>
-                      {app.shadowForm && (
-                        <span className={`text-xs font-mono ${FORM_COLORS[app.shadowForm] ?? "text-gray-500"}`}>
-                          [{app.shadowForm}]
-                        </span>
-                      )}
+                      {app.shadowForm && <span className={`text-xs font-mono ${FORM_COLORS[app.shadowForm] ?? "text-gray-500"}`}>[{app.shadowForm}]</span>}
                     </div>
-                    {app.message && (
-                      <p className="text-xs text-gray-500 mt-1 italic">"{app.message}"</p>
-                    )}
-                    <p className="text-xs text-gray-700 mt-0.5">
-                      {new Date(app.appliedAt).toLocaleDateString()}
-                    </p>
+                    {app.message && <p className="text-xs text-gray-500 mt-1 italic">"{app.message}"</p>}
+                    <p className="text-xs text-gray-700 mt-0.5">{new Date(app.appliedAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="success"
-                      loading={actingApp === app.characterId + "accept"}
-                      onClick={() => handleApplication(app.characterId, "accept")}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      loading={actingApp === app.characterId + "reject"}
-                      onClick={() => handleApplication(app.characterId, "reject")}
-                    >
-                      Reject
-                    </Button>
+                    <Button size="sm" variant="success" loading={actingApp === app.characterId + "accept"} onClick={() => handleApplication(app.characterId, "accept")}>Accept</Button>
+                    <Button size="sm" variant="danger" loading={actingApp === app.characterId + "reject"} onClick={() => handleApplication(app.characterId, "reject")}>Reject</Button>
                   </div>
                 </div>
               ))}
@@ -348,69 +331,117 @@ export default function GuildProfilePage() {
         <div className="space-y-1">
           {members.map((m) => {
             const rm = RANK_META[m.rank];
+            const pm = m.position ? POSITION_META[m.position] : null;
+            const isPromoting = positionSelecting === m._id;
+            const isRanking = rankSelecting === m._id;
+
             return (
-              <div
-                key={m._id}
-                className="flex items-center gap-3 py-2 border-b border-gray-900 last:border-0"
-              >
-                <span className={`text-xl w-7 text-center ${rm.color}`} title={rm.label}>
-                  {rm.piece}
-                </span>
+              <div key={m._id} className="py-2.5 border-b border-gray-900 last:border-0">
+                {/* Main row */}
+                <div className="flex items-center gap-3">
+                  <span className={`text-xl w-7 text-center ${rm.color}`} title={rm.label}>{rm.piece}</span>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-sm font-mono text-gray-200 hover:text-cyan-400 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/profile/${m._id}`)}
-                    >
-                      {m.name}
-                    </span>
-                    <span className="text-xs font-mono text-gray-600">Lv.{m.level}</span>
-                    {m.shadowForm && (
-                      <span className={`text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>
-                        [{m.shadowForm}]
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className="text-sm font-mono text-gray-200 hover:text-cyan-400 cursor-pointer transition-colors"
+                        onClick={() => router.push(`/profile/${m._id}`)}
+                      >
+                        {m.name}
                       </span>
-                    )}
+                      <span className="text-xs font-mono text-gray-600">Lv.{m.level}</span>
+                      {m.shadowForm && (
+                        <span className={`text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>[{m.shadowForm}]</span>
+                      )}
+                      {pm && (
+                        <span className={`text-xs font-mono border px-1.5 py-0.5 ${pm.color} border-current/30`}>
+                          {pm.symbol} {pm.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <span className={`text-xs font-mono ${rm.color} hidden sm:block`}>{rm.label}</span>
+                  <span className={`text-xs font-mono ${rm.color} hidden sm:block shrink-0`}>{rm.label}</span>
 
-                {isLeader && m._id !== viewerCharId && (
-                  <div className="relative">
-                    {rankSelecting === m._id ? (
-                      <div className="flex gap-1 flex-wrap">
-                        {PROMOTABLE_RANKS.map((r) => {
-                          const rMeta = RANK_META[r];
-                          return (
-                            <button
-                              key={r}
-                              disabled={actingRank === m._id}
-                              onClick={() => setMemberRank(m._id, r)}
-                              className={`text-xs font-mono px-1.5 py-0.5 border transition-colors ${
-                                m.rank === r
-                                  ? "border-gray-600 text-gray-400"
-                                  : `border-gray-800 ${rMeta.color} hover:border-gray-600`
-                              }`}
-                              title={rMeta.label}
-                            >
-                              {rMeta.piece}
-                            </button>
-                          );
-                        })}
-                        <button
-                          onClick={() => setRankSelecting(null)}
-                          className="text-xs font-mono text-gray-700 hover:text-gray-500 px-1"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
+                  {/* Leader controls */}
+                  {isLeader && m._id !== viewerCharId && (
+                    <div className="flex gap-2 shrink-0">
                       <button
-                        onClick={() => setRankSelecting(m._id)}
+                        onClick={() => { setRankSelecting(isRanking ? null : m._id); setPositionSelecting(null); }}
                         className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors"
                       >
-                        Set rank
+                        {isRanking ? "✕" : "Rank"}
+                      </button>
+                      <button
+                        onClick={() => { setPositionSelecting(isPromoting ? null : m._id); setRankSelecting(null); }}
+                        className="text-xs font-mono text-cyan-800 hover:text-cyan-500 transition-colors"
+                      >
+                        {isPromoting ? "✕" : "Promote"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rank picker (inline, leader only) */}
+                {isLeader && isRanking && (
+                  <div className="mt-2 ml-10 flex gap-1 flex-wrap">
+                    {PROMOTABLE_RANKS.map((r) => {
+                      const meta = RANK_META[r];
+                      return (
+                        <button
+                          key={r}
+                          disabled={actingRank === m._id}
+                          onClick={() => setMemberRank(m._id, r)}
+                          className={`text-xs font-mono px-2 py-1 border transition-colors ${
+                            m.rank === r ? "border-gray-600 text-gray-400" : `border-gray-800 ${meta.color} hover:border-gray-600`
+                          }`}
+                          title={meta.label}
+                        >
+                          {meta.piece} {meta.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Position / Promotion picker (leader only) */}
+                {isLeader && isPromoting && (
+                  <div className="mt-3 ml-10 space-y-3">
+                    {POSITION_GROUPS.map((group) => {
+                      const positions = Object.entries(POSITION_META).filter(([, v]) => v.group === group);
+                      return (
+                        <div key={group}>
+                          <p className={`text-xs font-mono uppercase tracking-widest mb-1.5 ${
+                            group === "Demon" ? "text-red-700" : group === "Shadow Form" ? "text-violet-700" : "text-yellow-800"
+                          }`}>
+                            {group}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {positions.map(([posId, meta]) => (
+                              <button
+                                key={posId}
+                                disabled={actingPosition === m._id}
+                                onClick={() => setMemberPosition(m._id, m.position === posId ? null : posId)}
+                                className={`text-xs font-mono px-2 py-1 border transition-colors ${
+                                  m.position === posId
+                                    ? `border-current/50 ${meta.color} opacity-60`
+                                    : `border-gray-800 ${meta.color} hover:border-gray-600`
+                                } ${group === "Demon" ? "font-bold" : ""}`}
+                                title={m.position === posId ? "Click to remove" : meta.label}
+                              >
+                                {meta.symbol} {meta.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {m.position && (
+                      <button
+                        onClick={() => setMemberPosition(m._id, null)}
+                        className="text-xs font-mono text-gray-700 hover:text-gray-500"
+                      >
+                        Clear position
                       </button>
                     )}
                   </div>

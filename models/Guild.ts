@@ -2,9 +2,19 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export type GuildRank = "queen" | "rook" | "bishop" | "knight" | "pawn";
 
+export type GuildPosition =
+  | "king" | "queen" | "rook" | "bishop" | "knight" | "pawn"
+  | "saber" | "lancer" | "rider" | "caster" | "berserker" | "archer" | "assassin"
+  | "demon";
+
 export interface IMemberRank {
   memberId: Types.ObjectId;
   rank: GuildRank;
+}
+
+export interface IMemberPosition {
+  memberId: Types.ObjectId;
+  position: GuildPosition;
 }
 
 export interface IGuildApplication {
@@ -20,6 +30,7 @@ export interface IGuild extends Document {
   officers: Types.ObjectId[];
   members: Types.ObjectId[];
   memberRanks: IMemberRank[];
+  memberPositions: IMemberPosition[];
   applications: IGuildApplication[];
   description: string;
   level: number;
@@ -39,6 +50,16 @@ const GuildSchema = new Schema<IGuild>(
       {
         memberId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
         rank: { type: String, enum: ["queen", "rook", "bishop", "knight", "pawn"], default: "pawn" },
+        _id: false,
+      },
+    ],
+    memberPositions: [
+      {
+        memberId: { type: Schema.Types.ObjectId, ref: "Character", required: true },
+        position: {
+          type: String,
+          enum: ["king","queen","rook","bishop","knight","pawn","saber","lancer","rider","caster","berserker","archer","assassin","demon"],
+        },
         _id: false,
       },
     ],

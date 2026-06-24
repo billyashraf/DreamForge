@@ -29,12 +29,16 @@ export async function GET(
   const rankMap = new Map(
     (guild.memberRanks ?? []).map((r) => [r.memberId.toString(), r.rank as string])
   );
+  const positionMap = new Map(
+    (guild.memberPositions ?? []).map((p) => [p.memberId.toString(), p.position as string])
+  );
   const leaderIdStr = guild.leaderId.toString();
 
   const members = memberDocs.map((m) => {
     const idStr = m._id.toString();
     const rank = idStr === leaderIdStr ? "king" : (rankMap.get(idStr) ?? "pawn");
-    return { _id: idStr, name: m.name, level: m.level, shadowForm: m.shadowForm, rank };
+    const position = positionMap.get(idStr) ?? null;
+    return { _id: idStr, name: m.name, level: m.level, shadowForm: m.shadowForm, rank, position };
   });
 
   members.sort((a, b) => {
