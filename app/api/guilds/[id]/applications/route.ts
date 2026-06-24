@@ -92,6 +92,9 @@ export async function PATCH(
 
     const alreadyMember = guild.members.some((m) => m.toString() === characterId);
     if (!alreadyMember) {
+      if ((applicant.guildIds ?? []).length >= 49)
+        return err("This player has reached the maximum of 49 guild memberships");
+
       guild.members.push(applicant._id as never);
       guild.memberRanks.push({ memberId: applicant._id as never, rank: "pawn" });
       applicant.guildIds = [...(applicant.guildIds ?? []), guild._id as never];

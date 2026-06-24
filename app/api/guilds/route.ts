@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
   const character = await Character.findOne({ userId: session.userId });
   if (!character) return err("Character not found", 404);
 
-  if (character.guildId) return err("You are already in a guild. Leave your current guild first.");
+  if ((character.guildIds ?? []).length >= 49)
+    return err("You have reached the maximum of 49 guild memberships");
+
+  const ledCount = await Guild.countDocuments({ leaderId: character._id });
+  if (ledCount >= 10) return err("You can lead a maximum of 10 guilds");
 
   if (character.level < 5) return err("You must be level 5 to create a guild");
 
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
   });
 
   character.guildId = guild._id as never;
+  character.guildIds = [...(character.guildIds ?? []), guild._id as never];
   await character.save();
 
   return ok({ message: `Guild [${guild.tag}] ${guild.name} created!`, guild }, 201);
