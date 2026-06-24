@@ -90,6 +90,8 @@ export default function GuildProfilePage() {
   const [promotingMember, setPromotingMember] = useState<string | null>(null);
   const [kickingMember, setKickingMember] = useState<string | null>(null);
   const [savingPosition, setSavingPosition] = useState<string | null>(null);
+  // Draft selection per member — holds the unsaved rank picks while the picker is open
+  const [draft, setDraft] = useState<string[]>([]);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
@@ -132,27 +134,36 @@ export default function GuildProfilePage() {
     if (isLeader || viewerPositions.includes("queen")) fetchApplications();
   }, [isLeader, viewerPositions, fetchApplications]);
 
-  // ── Optimistic position toggle — no page reload ──────────────────────────
-  async function togglePosition(memberId: string, position: string) {
-    const member = members.find((m) => m._id === memberId);
-    if (!member) return;
-    const current = member.positions;
-
-    let next: string[];
-    if (current.includes(position)) {
-      next = current.filter((p) => p !== position);
-    } else {
-      if (current.length >= 3) {
-        setMsg({ text: "Maximum 3 ranks per member", ok: false });
-        return;
-      }
-      next = [...current, position];
+  // ── Open promotion picker — seed draft from current saved positions ──────
+  function openPromoter(memberId: string) {
+    if (promotingMember === memberId) {
+      setPromotingMember(null);
+      setDraft([]);
+      return;
     }
+    const member = members.find((m) => m._id === memberId);
+    setPromotingMember(memberId);
+    setDraft(member?.positions ?? []);
+  }
 
-    // Update local state immediately
-    setMembers((prev) =>
-      prev.map((m) => m._id === memberId ? { ...m, positions: next } : m)
-    );
+  // ── Toggle a rank in the local draft (no API call) ────────────────────────
+  function toggleDraft(position: string) {
+    setDraft((prev) => {
+      if (prev.includes(position)) return prev.filter((p) => p !== position);
+      if (prev.length >= 3) return prev; // silently cap
+      return [...prev, position];
+    });
+  }
+
+  // ── Validate: commit draft → optimistic UI update + API save ─────────────
+  async function validatePositions(memberId: string) {
+    const saved = members.find((m) => m._id === memberId)?.positions ?? [];
+    const next = [...draft];
+
+    // Optimistic update
+    setMembers((prev) => prev.map((m) => m._id === memberId ? { ...m, positions: next } : m));
+    setPromotingMember(null);
+    setDraft([]);
 
     setSavingPosition(memberId);
     const res = await fetch(`/api/guilds/${id}/position`, {
@@ -165,10 +176,10 @@ export default function GuildProfilePage() {
 
     if (!ok) {
       // Revert on failure
-      setMembers((prev) =>
-        prev.map((m) => m._id === memberId ? { ...m, positions: current } : m)
-      );
+      setMembers((prev) => prev.map((m) => m._id === memberId ? { ...m, positions: saved } : m));
       setMsg({ text: error, ok: false });
+    } else {
+      setMsg({ text: next.length ? "Ranks updated" : "Demoted to Recruit", ok: true });
     }
   }
 
@@ -406,10 +417,10 @@ export default function GuildProfilePage() {
                   {isLeader && !isLeaderRow && (
                     <div className="flex gap-2 shrink-0">
                       <button
-                        onClick={() => setPromotingMember(isPromoting ? null : m._id)}
+                        onClick={() => openPromoter(m._id)}
                         className={`text-xs font-mono transition-colors ${isPromoting ? "text-cyan-500" : "text-gray-700 hover:text-cyan-600"}`}
                       >
-                        {isPromoting ? "✕" : "Promote"}
+                        {isPromoting ? "✕ Close" : "Promote"}
                       </button>
                       <button
                         onClick={() => kickMember(m._id, m.name)}
@@ -422,16 +433,14 @@ export default function GuildProfilePage() {
                   )}
                 </div>
 
-                {/* Promotion picker — multi-select up to 3, no page reload */}
+                {/* Promotion picker — draft selection, validated on confirm */}
                 {isLeader && isPromoting && (
-                  <div className="mt-3 ml-8 space-y-3 pb-1">
-                    <p className="text-xs font-mono text-gray-600">
-                      Select up to 3 ranks
-                      {savingPosition === m._id && <span className="ml-2 text-cyan-700 animate-pulse">saving...</span>}
-                      {m.positions.length > 0 && (
-                        <span className="ml-2 text-gray-700">({m.positions.length}/3 selected)</span>
-                      )}
+                  <div className="mt-3 ml-8 space-y-3 pb-1 border-l border-gray-800 pl-4">
+                    <p className="text-xs font-mono text-gray-500">
+                      Select 1–3 ranks then click <span className="text-cyan-500">Validate</span>
+                      <span className="ml-2 text-gray-700">({draft.length}/3)</span>
                     </p>
+
                     {RANK_GROUPS.map((group) => {
                       const slots = ASSIGNABLE_RANKS.filter((k) => RANK_META[k].group === group);
                       return (
@@ -444,24 +453,24 @@ export default function GuildProfilePage() {
                           <div className="flex flex-wrap gap-1.5">
                             {slots.map((posId) => {
                               const meta = RANK_META[posId];
-                              const isActive = m.positions.includes(posId);
-                              const maxed = !isActive && m.positions.length >= 3;
+                              const isSelected = draft.includes(posId);
+                              const maxed = !isSelected && draft.length >= 3;
                               return (
                                 <button
                                   key={posId}
-                                  disabled={maxed || savingPosition === m._id}
-                                  onClick={() => togglePosition(m._id, posId)}
+                                  disabled={maxed}
+                                  onClick={() => toggleDraft(posId)}
                                   className={`text-xs font-mono px-2 py-1 border transition-colors ${
-                                    isActive
+                                    isSelected
                                       ? `border-current bg-gray-900 ${meta.color}`
                                       : maxed
                                       ? `border-gray-900 text-gray-700 cursor-not-allowed`
                                       : `border-gray-800 ${meta.color} hover:border-gray-600`
                                   } ${group === "Demon" ? "font-bold" : ""}`}
-                                  title={isActive ? "Click to remove" : maxed ? "Max 3 ranks" : meta.label}
+                                  title={isSelected ? "Click to deselect" : maxed ? "Max 3 ranks" : meta.label}
                                 >
                                   {meta.symbol} {meta.label}
-                                  {isActive && <span className="ml-1 opacity-60">✓</span>}
+                                  {isSelected && <span className="ml-1 opacity-60">✓</span>}
                                 </button>
                               );
                             })}
@@ -469,22 +478,25 @@ export default function GuildProfilePage() {
                         </div>
                       );
                     })}
-                    {m.positions.length > 0 && (
-                      <button
-                        disabled={savingPosition === m._id}
-                        onClick={() => {
-                          setMembers((prev) => prev.map((mm) => mm._id === m._id ? { ...mm, positions: [] } : mm));
-                          fetch(`/api/guilds/${id}/position`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ memberId: m._id, positions: [] }),
-                          });
-                        }}
-                        className="text-xs font-mono text-gray-700 hover:text-gray-500 transition-colors"
+
+                    {/* Action row */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <Button
+                        size="sm"
+                        loading={savingPosition === m._id}
+                        onClick={() => validatePositions(m._id)}
                       >
-                        ◌ Demote to Recruit
-                      </button>
-                    )}
+                        Validate
+                      </Button>
+                      {draft.length > 0 && (
+                        <button
+                          onClick={() => setDraft([])}
+                          className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors"
+                        >
+                          ◌ Clear selection
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
