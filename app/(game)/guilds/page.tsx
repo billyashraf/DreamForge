@@ -30,7 +30,8 @@ export default function GuildsPage() {
   const { user, character, setUser, setCharacter, addLog } = useGameStore();
   const [tab, setTab] = useState<Tab>("hall");
   const [guilds, setGuilds] = useState<Guild[]>([]);
-  const [myGuilds, setMyGuilds] = useState<MyGuild[]>([]);
+  const [ownedGuilds, setOwnedGuilds] = useState<MyGuild[]>([]);
+  const [joinedGuilds, setJoinedGuilds] = useState<MyGuild[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -61,7 +62,8 @@ export default function GuildsPage() {
     }
     if (mineRes.ok) {
       const data = await mineRes.json();
-      setMyGuilds(data.data.guilds);
+      setOwnedGuilds(data.data.owned);
+      setJoinedGuilds(data.data.joined);
     }
     setLoading(false);
   }, []);
@@ -128,7 +130,7 @@ export default function GuildsPage() {
     );
   }
 
-  const myGuildIds = new Set(myGuilds.map((g) => g._id));
+  const myGuildIds = new Set([...ownedGuilds, ...joinedGuilds].map((g) => g._id));
 
   return (
     <div className="space-y-4">
@@ -161,9 +163,9 @@ export default function GuildsPage() {
           }`}
         >
           MY GUILDS
-          {myGuilds.length > 0 && (
+          {(ownedGuilds.length + joinedGuilds.length) > 0 && (
             <span className="ml-1.5 bg-cyan-900 text-cyan-300 text-xs px-1.5 py-0.5 rounded-sm">
-              {myGuilds.length}
+              {ownedGuilds.length + joinedGuilds.length}
             </span>
           )}
         </button>
@@ -249,8 +251,8 @@ export default function GuildsPage() {
         </div>
       ) : (
         /* My Guilds tab */
-        <div className="space-y-2">
-          {myGuilds.length === 0 ? (
+        <div className="space-y-5">
+          {ownedGuilds.length === 0 && joinedGuilds.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-3xl text-gray-800 mb-3">◈</div>
               <p className="text-xs font-mono text-gray-600">You have not joined any guilds yet.</p>
@@ -262,21 +264,53 @@ export default function GuildsPage() {
               </button>
             </div>
           ) : (
-            myGuilds.map((g) => (
-              <div
-                key={g._id}
-                className="border border-gray-800 bg-gray-950 p-4 flex items-center gap-4 cursor-pointer hover:border-gray-700 transition-colors"
-                onClick={() => router.push(`/guilds/${g._id}`)}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-gray-600">[{g.tag}]</span>
-                    <span className="text-sm font-mono font-medium text-gray-200">{g.name}</span>
+            <>
+              {ownedGuilds.length > 0 && (
+                <div>
+                  <p className="text-xs font-mono text-yellow-600 uppercase tracking-widest mb-2">
+                    ♔ Owned ({ownedGuilds.length}/10)
+                  </p>
+                  <div className="space-y-1">
+                    {ownedGuilds.map((g) => (
+                      <div
+                        key={g._id}
+                        className="border border-yellow-900/40 bg-gray-950 p-4 flex items-center gap-4 cursor-pointer hover:border-yellow-800/60 transition-colors"
+                        onClick={() => router.push(`/guilds/${g._id}`)}
+                      >
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-600">[{g.tag}]</span>
+                          <span className="text-sm font-mono font-medium text-gray-200">{g.name}</span>
+                        </div>
+                        <span className="text-xs font-mono text-gray-600">View →</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <span className="text-xs font-mono text-gray-600">View Profile →</span>
-              </div>
-            ))
+              )}
+
+              {joinedGuilds.length > 0 && (
+                <div>
+                  <p className="text-xs font-mono text-cyan-700 uppercase tracking-widest mb-2">
+                    ♟ Joined ({joinedGuilds.length}/{49 - ownedGuilds.length} remaining)
+                  </p>
+                  <div className="space-y-1">
+                    {joinedGuilds.map((g) => (
+                      <div
+                        key={g._id}
+                        className="border border-gray-800 bg-gray-950 p-4 flex items-center gap-4 cursor-pointer hover:border-gray-700 transition-colors"
+                        onClick={() => router.push(`/guilds/${g._id}`)}
+                      >
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-600">[{g.tag}]</span>
+                          <span className="text-sm font-mono font-medium text-gray-200">{g.name}</span>
+                        </div>
+                        <span className="text-xs font-mono text-gray-600">View →</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
