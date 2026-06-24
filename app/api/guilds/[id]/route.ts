@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { ok, err, unauthorized } from "@/lib/response";
+import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
 
@@ -71,4 +71,44 @@ export async function GET(
     viewerCharId,
     hasApplied,
   });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session) return unauthorized();
+
+    const { id } = await params;
+    await connectDB();
+
+    const [guild, character] = await Promise.all([
+      Guild.findById(id),
+      Character.findOne({ userId: session.userId }).select("_id"),
+    ]);
+
+    if (!guild) return err("Guild not found", 404);
+    if (!character) return err("Character not found", 404);
+    if (guild.leaderId.toString() !== character._id.toString()) return forbidden();
+
+    const memberIds = guild.members.map((m) => m.toString());
+
+    await Character.updateMany(
+      { _id: { $in: memberIds } },
+      { $pull: { guildIds: guild._id } }
+    );
+    await Character.updateMany(
+      { _id: { $in: memberIds }, guildId: guild._id },
+      { $unset: { guildId: "" } }
+    );
+
+    await Guild.findByIdAndDelete(id);
+
+    return ok({ message: `Guild [${guild.tag}] ${guild.name} has been disbanded` });
+  } catch (e) {
+    console.error("[delete guild]", e);
+    return err("Server error", 500);
+  }
 }

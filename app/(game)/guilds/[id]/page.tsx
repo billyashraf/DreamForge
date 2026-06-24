@@ -81,6 +81,7 @@ export default function GuildProfilePage() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [actingApp, setActingApp] = useState<string | null>(null);
   const [actingRank, setActingRank] = useState<string | null>(null);
   const [rankSelecting, setRankSelecting] = useState<string | null>(null);
@@ -140,6 +141,19 @@ export default function GuildProfilePage() {
     setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
     if (ok) fetchGuild();
     setApplying(false);
+  }
+
+  async function deleteGuild() {
+    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone and all members will be removed.`)) return;
+    setDeleting(true);
+    const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
+    const { ok, data, error } = await safeJson(res);
+    if (ok) {
+      router.push("/guilds");
+    } else {
+      setMsg({ text: error ?? (data?.error as string), ok: false });
+    }
+    setDeleting(false);
   }
 
   async function leaveGuild() {
@@ -248,9 +262,14 @@ export default function GuildProfilePage() {
               </Button>
             )}
             {isLeader && (
-              <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">
-                ♔ Guild Leader
-              </span>
+              <>
+                <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">
+                  ♔ Guild Leader
+                </span>
+                <Button size="sm" variant="danger" loading={deleting} onClick={deleteGuild}>
+                  Disband Guild
+                </Button>
+              </>
             )}
           </div>
         </div>
