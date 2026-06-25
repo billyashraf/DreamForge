@@ -86,9 +86,10 @@ export async function PATCH(req: NextRequest) {
       break;
 
     case "demote_player":
-      if (session.role !== "admin") return forbidden();
       if (target.role === "player") return err("Already a player");
+      // Admins must be stepped down to moderator first before going to player
       if (target.role === "admin") return forbidden();
+      // Both admin and moderator can demote a moderator to player
       target.role = "player";
       break;
 

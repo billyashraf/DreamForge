@@ -207,8 +207,8 @@ export default function AdminUsersPage() {
                             </Button>
                           )}
 
-                          {/* Demote moderator → player */}
-                          {user?.role === "admin" && u.role === "moderator" && (
+                          {/* Demote moderator → player — both admin and moderator can do this */}
+                          {(user?.role === "admin" || user?.role === "moderator") && u.role === "moderator" && (
                             <Button
                               size="sm"
                               variant="danger"

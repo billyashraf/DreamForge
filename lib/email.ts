@@ -2,11 +2,15 @@ import nodemailer from "nodemailer";
 
 function isSmtpConfigured() {
   const { SMTP_HOST, SMTP_USER, SMTP_PASS } = process.env;
-  return (
-    SMTP_HOST && SMTP_HOST !== "smtp.example.com" &&
-    SMTP_USER && SMTP_USER !== "noreply@example.com" &&
-    SMTP_PASS && SMTP_PASS !== "your-smtp-password"
-  );
+  if (!SMTP_HOST || SMTP_HOST === "smtp.example.com") return false;
+  if (!SMTP_USER || SMTP_USER === "noreply@example.com") return false;
+  if (!SMTP_PASS || SMTP_PASS === "your-smtp-password") return false;
+  // A valid sender address is required: either SMTP_FROM is set, or SMTP_USER looks like an email.
+  // If SMTP_USER is a non-email auth token (e.g. Resend uses "resend") and SMTP_FROM is not
+  // configured yet, treat SMTP as unconfigured so we fall back to console logging in dev
+  // rather than hitting the server with an invalid MAIL FROM and throwing.
+  const from = process.env.SMTP_FROM ?? SMTP_USER;
+  return from.includes("@");
 }
 
 function getTransporter() {
