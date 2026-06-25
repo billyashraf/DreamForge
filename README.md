@@ -1,6 +1,10 @@
-# DreameForge
+# ⚒️ DreameForge
 
-A full-stack text MMORPG built with Next.js 15, MongoDB, and Zustand. Players choose a Shadow Form, explore a sci-fi world across four locations, complete missions, join guilds, upgrade a Curse Tree, and advance through the Academy.
+### 🌙 A dark sci-fi text MMORPG — forge your shadow, conquer the cosmos!
+
+> 🎮 **[▶ JOIN THE GAME — Play Now!](https://dream-forge-gamma.vercel.app/)** 🎮
+
+A full-stack text MMORPG built with Next.js, MongoDB, and Zustand. Choose a Shadow Form, explore a sci-fi world across four locations, complete missions, join guilds & teams, upgrade a Curse Tree, and advance through the Academy. ⚔️🌑🚀
 
 ---
 
