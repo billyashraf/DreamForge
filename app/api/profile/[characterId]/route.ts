@@ -18,7 +18,7 @@ export async function GET(
   await connectDB();
 
   const target = await Character.findById(characterId)
-    .select("name level shadowForm currentLocation strength intelligence agility guildIds teamIds isDead merits")
+    .select("name level shadowForm currentLocation strength intelligence agility guildIds teamIds academyTree isDead merits")
     .lean();
 
   if (!target) return err("Character not found", 404);
@@ -40,6 +40,7 @@ export async function GET(
 
   return ok({
     character: { ...target, _id: target._id.toString() },
+    academyTree: (target.academyTree ?? []).map((n) => ({ fieldId: n.fieldId, level: n.level })),
     guilds: guilds.map((g) => {
       const isLeader = g.leaderId.toString() === characterId;
       const positions: string[] = isLeader

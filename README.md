@@ -276,12 +276,12 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 
 Every character has a public profile page at `/profile/[characterId]` showing their **title banner**, level, shadow form, location, stats (STR/INT/AGI), guild memberships, and teams. Character names in the CharacterPanel and chat windows are clickable links to this page.
 
-#### Title System
+#### Title System (Academy-Based)
 
-Characters earn progressive titles based on level. Each title has a unique colored banner displayed at the top of their profile:
+Titles are earned by leveling up Academy fields. Each field awards a title based on its current level, using these tiers:
 
-| Title | Level Range | Color |
-|-------|-------------|-------|
+| Title | Field Level Range | Color |
+|-------|-------------------|-------|
 | ⚙ Scavenger | 1 – 50 | Gray |
 | ⚔ Monster Hunter | 51 – 100 | Green |
 | ◉ Beast Tamer | 101 – 150 | Cyan |
@@ -293,12 +293,14 @@ Characters earn progressive titles based on level. Each title has a unique color
 | ◫ Scientist | 401 – 450 | Purple |
 | ✦ Sage | 451 – 500 | Gold |
 
-The banner also shows how many levels remain until the next title.
+The profile banner shows the **highest-tier title** earned across all fields. Below it, the **Academy Titles** card lists every unlocked field with its current level and title tier. Titles are earned independently per field — you can be a Sage in Algorithms while still a Scavenger in Quantum Computing.
 
 #### Own Profile Sections
 
-When viewing your own profile, three additional sections appear:
-- **Messages** — last 5 received owl inbox messages with a link to the full inbox
+When viewing your own profile, the following full communication panels appear (same as the dashboard):
+- **Shadow Owl** — full inbox, sent messages, and compose (with character search)
+- **Team Telepathy** — live team chat (only shown if in a team)
+- **Guild Echo** — live guild chat with multi-guild tab support (only shown if in a guild)
 - **My Guilds** — all your guilds as clickable links to each guild's page
 - **My Teams** — all your teams as clickable links to each team's page
 

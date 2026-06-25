@@ -6,7 +6,11 @@ import Link from "next/link";
 import { useGameStore } from "@/store/useGameStore";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { getTitle, getNextTitle } from "@/lib/titles";
+import { OwlInbox } from "@/components/game/OwlInbox";
+import { TeamChat } from "@/components/game/TeamChat";
+import { GuildChat } from "@/components/game/GuildChat";
+import { getTitle, getNextTitle, TITLES } from "@/lib/titles";
+import { ACADEMY_FIELDS } from "@/lib/academyFields";
 
 const LOCATION_LABELS: Record<string, string> = {
   metapolis: "Metapolis, Moon",
@@ -42,14 +46,6 @@ const FORM_COLORS: Record<string, string> = {
   assassin:  "text-violet-400",
 };
 
-interface OwlMessage {
-  _id: string;
-  fromName?: string;
-  content: string;
-  deliveredAt: string;
-  read: boolean;
-}
-
 interface ProfileData {
   character: {
     _id: string;
@@ -63,6 +59,7 @@ interface ProfileData {
     isDead: boolean;
     merits: number;
   };
+  academyTree: { fieldId: string; level: number }[];
   guilds: { _id: string; name: string; tag: string; positions: string[] }[];
   teams: { _id: string; name: string }[];
   isOwn: boolean;
@@ -70,16 +67,6 @@ interface ProfileData {
   viewerOwlReturnAt: string | null;
   viewerCharacterId: string | null;
   viewerName: string | null;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
 }
 
 export default function ProfilePage() {
@@ -91,7 +78,7 @@ export default function ProfilePage() {
   const [loading, setLoading]   = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Compose owl state
+  // Compose owl state (for viewing other players)
   const [owlOpen, setOwlOpen]         = useState(false);
   const [message, setMessage]         = useState("");
   const [sending, setSending]         = useState(false);
@@ -99,10 +86,6 @@ export default function ProfilePage() {
   const [owlSuccess, setOwlSuccess]   = useState("");
   const [owlReturnAt, setOwlReturnAt] = useState<string | null>(null);
   const [now, setNow]                 = useState(() => Date.now());
-
-  // Own-profile inbox state
-  const [inbox, setInbox]             = useState<OwlMessage[]>([]);
-  const [inboxLoading, setInboxLoading] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1_000);
@@ -133,16 +116,6 @@ export default function ProfilePage() {
   }, [params.characterId]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
-
-  // Fetch owl inbox for own profile
-  useEffect(() => {
-    if (!profile?.isOwn) return;
-    setInboxLoading(true);
-    fetch("/api/owl/inbox")
-      .then((r) => r.json())
-      .then((d) => { setInbox((d.data?.inbox ?? []).slice(0, 5)); })
-      .finally(() => setInboxLoading(false));
-  }, [profile?.isOwn]);
 
   const owlAvailable = !owlReturnAt || new Date(owlReturnAt).getTime() <= now;
   const owlMsLeft    = owlReturnAt ? Math.max(0, new Date(owlReturnAt).getTime() - now) : 0;
@@ -190,10 +163,29 @@ export default function ProfilePage() {
     );
   }
 
-  const { character, guilds, teams, isOwn } = profile;
+  const { character, guilds, teams, academyTree, isOwn } = profile;
   const formColor = character.shadowForm ? (FORM_COLORS[character.shadowForm] ?? "text-gray-400") : "text-gray-600";
-  const title = getTitle(character.level);
-  const nextTitle = getNextTitle(title);
+
+  // Derive best title from academy tree (highest tier across all unlocked fields)
+  const bestTitle = academyTree.length > 0
+    ? academyTree.reduce((best, node) => {
+        const t = getTitle(node.level);
+        return t.min > best.min ? t : best;
+      }, TITLES[0])
+    : null;
+
+  const nextBestTitle = bestTitle ? getNextTitle(bestTitle) : null;
+
+  // Build academy title list: merge with field labels, sort by level desc
+  const fieldLabelMap = new Map(ACADEMY_FIELDS.map((f) => [f.id, f.label]));
+  const sortedAcademy = academyTree
+    .slice()
+    .sort((a, b) => b.level - a.level)
+    .map((node) => ({
+      ...node,
+      label: fieldLabelMap.get(node.fieldId) ?? node.fieldId,
+      title: getTitle(node.level),
+    }));
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
@@ -204,40 +196,42 @@ export default function ProfilePage() {
         ← Back
       </button>
 
-      {/* Title banner */}
-      <div
-        className="border relative overflow-hidden py-5 px-5"
-        style={{
-          background: `linear-gradient(135deg, ${title.color}1a 0%, #030712 100%)`,
-          borderColor: `${title.color}44`,
-        }}
-      >
+      {/* Title banner — academy-based, only shown when at least one field is unlocked */}
+      {bestTitle && (
         <div
-          className="absolute top-1 right-4 text-6xl opacity-10 leading-none select-none pointer-events-none"
-          style={{ color: title.color }}
+          className="border relative overflow-hidden py-5 px-5"
+          style={{
+            background: `linear-gradient(135deg, ${bestTitle.color}1a 0%, #030712 100%)`,
+            borderColor: `${bestTitle.color}44`,
+          }}
         >
-          {title.icon}
+          <div
+            className="absolute top-1 right-4 text-6xl opacity-10 leading-none select-none pointer-events-none"
+            style={{ color: bestTitle.color }}
+          >
+            {bestTitle.icon}
+          </div>
+          <div className="relative">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">
+              Highest Academy Title
+            </div>
+            <div className="text-2xl font-mono font-bold tracking-wider" style={{ color: bestTitle.color }}>
+              {bestTitle.icon} {bestTitle.label.toUpperCase()}
+            </div>
+            <div className="text-xs font-mono mt-1 flex flex-wrap gap-x-3">
+              <span className="text-gray-600">Lvl {bestTitle.min}–{bestTitle.max}</span>
+              {nextBestTitle && (
+                <span style={{ color: `${bestTitle.color}88` }}>
+                  Reach Lvl {bestTitle.max + 1} in any field → {nextBestTitle.label}
+                </span>
+              )}
+              {!nextBestTitle && (
+                <span style={{ color: bestTitle.color }}>Max Title</span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="relative">
-          <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">
-            Title · Level {character.level}
-          </div>
-          <div className="text-2xl font-mono font-bold tracking-wider" style={{ color: title.color }}>
-            {title.icon} {title.label.toUpperCase()}
-          </div>
-          <div className="text-xs font-mono text-gray-600 mt-1 flex flex-wrap gap-x-3">
-            <span>Lvl {title.min}–{title.max}</span>
-            {nextTitle && character.level < title.max && (
-              <span style={{ color: `${title.color}88` }}>
-                {title.max - character.level} levels to {nextTitle.label}
-              </span>
-            )}
-            {!nextTitle && character.level >= title.max && (
-              <span style={{ color: title.color }}>Max Title Reached</span>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Main profile card */}
       <Card title="Character Profile" accent="cyan">
@@ -341,6 +335,33 @@ export default function ProfilePage() {
         </div>
       </Card>
 
+      {/* Academy Titles — shown for all profiles */}
+      {sortedAcademy.length > 0 && (
+        <Card title="Academy Titles" accent="yellow">
+          <div className="max-h-56 overflow-y-auto space-y-0">
+            {sortedAcademy.map((node) => (
+              <div
+                key={node.fieldId}
+                className="flex items-center justify-between py-1.5 border-b border-gray-900 last:border-0"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm leading-none" style={{ color: node.title.color }}>
+                    {node.title.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-mono text-gray-300 truncate">{node.label}</div>
+                    <div className="text-[10px] font-mono" style={{ color: node.title.color }}>
+                      {node.title.label}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs font-mono text-gray-600 shrink-0 ml-2">L{node.level}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Shadow Owl — for other players */}
       {!isOwn && (
         <Card title="Shadow Owl" accent="purple">
@@ -396,46 +417,12 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      {/* Own profile sections */}
+      {/* Own profile — full communication hub + guild/team links */}
       {isOwn && (
         <>
-          {/* My Messages (owl inbox) */}
-          <Card title="Messages" accent="purple">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">Recent Inbox</span>
-                <Link
-                  href="/owl-inbox"
-                  className="text-[10px] font-mono text-purple-600 hover:text-purple-400 transition-colors"
-                >
-                  view all →
-                </Link>
-              </div>
-              {inboxLoading ? (
-                <p className="text-xs font-mono text-gray-600 animate-pulse">Loading messages...</p>
-              ) : inbox.length === 0 ? (
-                <p className="text-xs font-mono text-gray-700">No messages received yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {inbox.map((msg) => (
-                    <li key={msg._id} className="border border-gray-800 p-2 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-purple-400">
-                          {msg.fromName ?? "Unknown"}
-                        </span>
-                        <span className="text-[10px] font-mono text-gray-700">
-                          {timeAgo(msg.deliveredAt)}
-                        </span>
-                      </div>
-                      <p className="text-xs font-mono text-gray-400 line-clamp-2 leading-relaxed">
-                        {msg.content}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Card>
+          <OwlInbox />
+          <TeamChat />
+          <GuildChat />
 
           {/* My Guilds */}
           {guilds.length > 0 && (
