@@ -45,17 +45,22 @@ export async function POST(req: NextRequest) {
     verificationTokenExpiry,
   });
 
-  // Send verification email (non-blocking)
+  let emailSent = true;
   try {
     await sendVerificationEmail(email, verificationToken);
   } catch (e) {
     console.error("[register] email send failed:", e);
+    emailSent = false;
   }
 
   const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
   const cookie = createSessionCookie(token);
 
-  const response = ok({ message: "Account created successfully. Check your email to verify your account.", userId: user._id }, 201);
+  const message = emailSent
+    ? "Account created successfully. Check your email to verify your account."
+    : "Account created successfully. Verification email could not be sent — use the resend option from your settings.";
+
+  const response = ok({ message, userId: user._id, emailSent }, 201);
   response.headers.set("Set-Cookie", cookie);
   return response;
 }
