@@ -75,6 +75,7 @@ export function Navbar() {
 
   const [loggingOut, setLoggingOut]   = useState(false);
   const [openPopup, setOpenPopup]     = useState<PopupType>(null);
+  const [mobileOpen, setMobileOpen]   = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifs, setNotifs]           = useState<NotifItem[]>([]);
   const [logs, setLogs]               = useState<LogItem[]>([]);
@@ -117,6 +118,11 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [openPopup]);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [router]);
+
   async function handleBellClick() {
     if (openPopup === "notif") {
       router.push("/notifications");
@@ -130,7 +136,6 @@ export function Navbar() {
       if (r.ok) {
         const d = await r.json();
         setNotifs((d.data.notifications ?? []).slice(0, 5));
-        // After fetching, re-poll unread to update badge
         setTimeout(pollUnread, 500);
       }
     } catch { /* ignore */ }
@@ -179,168 +184,268 @@ export function Navbar() {
   const isInvite = (n: NotifItem) => n.type === "guild_invite" || n.type === "team_invite";
 
   return (
-    <nav className="bg-gray-950 border-b border-gray-800 px-4 py-2 flex items-center justify-between relative z-50">
-      <div className="flex items-center gap-6">
-        <Link href="/dashboard" className="font-mono font-bold text-cyan-400 text-lg tracking-tight">
-          DREAM<span className="text-gray-500">FORGE</span>
-        </Link>
-        <div className="hidden md:flex items-center gap-4 text-xs font-mono text-gray-500">
-          <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>
-          {canGuilds ? (
-            <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
-          ) : (
-            <span title="Requires Caster or Assassin form" className="text-gray-800 cursor-not-allowed select-none">Guilds</span>
+    <nav className="bg-gray-950 border-b border-gray-800 relative z-50">
+      {/* Main bar */}
+      <div className="px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="font-mono font-bold text-cyan-400 text-lg tracking-tight">
+            DREAM<span className="text-gray-500">FORGE</span>
+          </Link>
+          {/* Desktop nav links */}
+          <div className="hidden md:flex items-center gap-4 text-xs font-mono text-gray-500">
+            <Link href="/dashboard" className="hover:text-gray-200 transition-colors">Dashboard</Link>
+            {canGuilds ? (
+              <Link href="/guilds" className="hover:text-gray-200 transition-colors">Guilds</Link>
+            ) : (
+              <span title="Requires Caster or Assassin form" className="text-gray-800 cursor-not-allowed select-none">Guilds</span>
+            )}
+            <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
+            <Link href="/people" className="hover:text-gray-200 transition-colors">People</Link>
+            {canCommitLog ? (
+              <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">Commit Log</Link>
+            ) : (
+              <span title="Requires Lancer or Assassin form" className="text-gray-800 cursor-not-allowed select-none">Commit Log</span>
+            )}
+            <Link href="/curse-tree" className="hover:text-purple-300 transition-colors text-purple-600 font-semibold">Curse Tree</Link>
+            {canAcademy ? (
+              <Link href="/academy" className="hover:text-amber-300 transition-colors text-amber-600 font-semibold">Academy</Link>
+            ) : (
+              <span title="Requires Rider form" className="text-yellow-900 cursor-not-allowed select-none font-semibold">Academy</span>
+            )}
+            <Link href="/shadow-form" className="hover:text-indigo-300 transition-colors text-indigo-600 font-semibold">Shadow Form</Link>
+            {user?.role !== "player" && (
+              <Link href="/admin" className="text-red-500 hover:text-red-400 transition-colors">Admin</Link>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3" ref={popupRef}>
+          {shadowForm && (
+            <span className="text-[10px] font-mono text-gray-700 hidden sm:block uppercase tracking-widest">◆ {shadowForm}</span>
           )}
-          <Link href="/teams" className="hover:text-gray-200 transition-colors">Teams</Link>
-          <Link href="/people" className="hover:text-gray-200 transition-colors">People</Link>
-          {canCommitLog ? (
-            <Link href="/commit-log" className="hover:text-gray-200 transition-colors text-gray-600">Commit Log</Link>
-          ) : (
-            <span title="Requires Lancer or Assassin form" className="text-gray-800 cursor-not-allowed select-none">Commit Log</span>
+          {user && (
+            <span className="text-xs font-mono text-gray-600 hidden sm:block">[{user.role.toUpperCase()}] {user.username}</span>
           )}
-          <Link href="/curse-tree" className="hover:text-purple-300 transition-colors text-purple-600 font-semibold">Curse Tree</Link>
-          {canAcademy ? (
-            <Link href="/academy" className="hover:text-amber-300 transition-colors text-amber-600 font-semibold">Academy</Link>
-          ) : (
-            <span title="Requires Rider form" className="text-yellow-900 cursor-not-allowed select-none font-semibold">Academy</span>
+
+          {/* Log icon */}
+          {user && (
+            <div className="relative">
+              <button
+                onClick={handleLogClick}
+                title={openPopup === "log" ? "Click again to open full log" : "Activity log"}
+                className={`text-sm font-mono transition-colors px-1 ${openPopup === "log" ? "text-amber-400" : "text-gray-600 hover:text-amber-400"}`}
+              >
+                ▤
+              </button>
+              {openPopup === "log" && (
+                <div className="absolute right-0 top-8 w-72 bg-gray-950 border border-gray-800 shadow-xl z-50">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
+                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Activity Log</span>
+                    <span className="text-[10px] font-mono text-amber-600 cursor-pointer hover:text-amber-400" onClick={() => { router.push("/logs"); setOpenPopup(null); }}>
+                      view all →
+                    </span>
+                  </div>
+                  {logLoading ? (
+                    <p className="text-xs font-mono text-gray-600 px-3 py-3">Loading...</p>
+                  ) : logs.length === 0 ? (
+                    <p className="text-xs font-mono text-gray-600 px-3 py-3">No activity yet.</p>
+                  ) : (
+                    <ul className="divide-y divide-gray-900">
+                      {logs.map((l) => (
+                        <li key={l._id} className="px-3 py-2">
+                          <p className="text-xs font-mono text-gray-300 leading-snug">{l.message}</p>
+                          <p className="text-[10px] font-mono text-gray-700 mt-0.5">{timeAgo(l.createdAt)}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="px-3 py-2 border-t border-gray-800">
+                    <button onClick={() => { router.push("/logs"); setOpenPopup(null); }} className="text-[10px] font-mono text-amber-600 hover:text-amber-400">
+                      Click again to open full log page →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-          <Link href="/shadow-form" className="hover:text-indigo-300 transition-colors text-indigo-600 font-semibold">Shadow Form</Link>
-          {user?.role !== "player" && (
-            <Link href="/admin" className="text-red-500 hover:text-red-400 transition-colors">Admin</Link>
+
+          {/* Notification bell */}
+          {user && (
+            <div className="relative">
+              <button
+                onClick={handleBellClick}
+                title={openPopup === "notif" ? "Click again to open full notifications" : "Notifications"}
+                className={`text-sm font-mono transition-colors px-1 relative ${openPopup === "notif" ? "text-cyan-400" : "text-gray-600 hover:text-cyan-400"}`}
+              >
+                ◉
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-mono rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5 leading-none">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              {openPopup === "notif" && (
+                <div className="absolute right-0 top-8 w-80 bg-gray-950 border border-gray-800 shadow-xl z-50">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
+                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Notifications</span>
+                    <span className="text-[10px] font-mono text-cyan-600 cursor-pointer hover:text-cyan-400" onClick={() => { router.push("/notifications"); setOpenPopup(null); }}>
+                      view all →
+                    </span>
+                  </div>
+                  {notifLoading ? (
+                    <p className="text-xs font-mono text-gray-600 px-3 py-3">Loading...</p>
+                  ) : notifs.length === 0 ? (
+                    <p className="text-xs font-mono text-gray-600 px-3 py-3">No notifications.</p>
+                  ) : (
+                    <ul className="divide-y divide-gray-900">
+                      {notifs.map((n) => (
+                        <li key={n._id} className="px-3 py-2 space-y-1.5">
+                          <p className="text-xs font-mono text-gray-400 leading-snug">
+                            <NotifLabel n={n} />
+                          </p>
+                          <p className="text-[10px] font-mono text-gray-700">{timeAgo(n.createdAt)}</p>
+                          {isInvite(n) && n.status === "pending" && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => respondToInvite(n._id, "accept")}
+                                disabled={acting === n._id}
+                                className="text-[10px] font-mono text-green-400 hover:text-green-300 border border-green-800 hover:border-green-600 px-2 py-0.5 transition-colors disabled:opacity-50"
+                              >
+                                {acting === n._id ? "..." : "Accept"}
+                              </button>
+                              <button
+                                onClick={() => respondToInvite(n._id, "decline")}
+                                disabled={acting === n._id}
+                                className="text-[10px] font-mono text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-2 py-0.5 transition-colors disabled:opacity-50"
+                              >
+                                {acting === n._id ? "..." : "Decline"}
+                              </button>
+                            </div>
+                          )}
+                          {isInvite(n) && n.status !== "pending" && (
+                            <span className={`text-[10px] font-mono ${n.status === "accepted" ? "text-green-600" : "text-gray-600"}`}>
+                              {n.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="px-3 py-2 border-t border-gray-800">
+                    <button onClick={() => { router.push("/notifications"); setOpenPopup(null); }} className="text-[10px] font-mono text-cyan-600 hover:text-cyan-400">
+                      Click again to open full notifications page →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+
+          <button
+            onClick={logout}
+            disabled={loggingOut}
+            className="text-xs font-mono text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50 hidden sm:block"
+          >
+            LOGOUT
+          </button>
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 text-gray-400 hover:text-gray-200 transition-colors"
+            aria-label="Toggle menu"
+          >
+            <span className={`block w-5 h-px bg-current transition-all duration-200 ${mobileOpen ? "rotate-45 translate-y-[7px]" : ""}`} />
+            <span className={`block w-5 h-px bg-current transition-all duration-200 ${mobileOpen ? "opacity-0" : ""}`} />
+            <span className={`block w-5 h-px bg-current transition-all duration-200 ${mobileOpen ? "-rotate-45 -translate-y-[7px]" : ""}`} />
+          </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-3" ref={popupRef}>
-        {shadowForm && (
-          <span className="text-[10px] font-mono text-gray-700 hidden sm:block uppercase tracking-widest">◆ {shadowForm}</span>
-        )}
-        {user && (
-          <span className="text-xs font-mono text-gray-600 hidden sm:block">[{user.role.toUpperCase()}] {user.username}</span>
-        )}
-
-        {/* Log icon */}
-        {user && (
-          <div className="relative">
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-gray-800 bg-gray-950 px-4 py-3 flex flex-col gap-1">
+          {user && (
+            <div className="flex items-center justify-between pb-2 mb-1 border-b border-gray-800">
+              <span className="text-xs font-mono text-gray-500">[{user.role.toUpperCase()}] {user.username}</span>
+              {shadowForm && <span className="text-[10px] font-mono text-gray-700 uppercase tracking-widest">◆ {shadowForm}</span>}
+            </div>
+          )}
+          <MobileNavLink href="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</MobileNavLink>
+          {canGuilds ? (
+            <MobileNavLink href="/guilds" onClick={() => setMobileOpen(false)}>Guilds</MobileNavLink>
+          ) : (
+            <MobileNavDisabled title="Requires Caster or Assassin form">Guilds</MobileNavDisabled>
+          )}
+          <MobileNavLink href="/teams" onClick={() => setMobileOpen(false)}>Teams</MobileNavLink>
+          <MobileNavLink href="/people" onClick={() => setMobileOpen(false)}>People</MobileNavLink>
+          {canCommitLog ? (
+            <MobileNavLink href="/commit-log" onClick={() => setMobileOpen(false)} className="text-gray-500">Commit Log</MobileNavLink>
+          ) : (
+            <MobileNavDisabled title="Requires Lancer or Assassin form">Commit Log</MobileNavDisabled>
+          )}
+          <MobileNavLink href="/curse-tree" onClick={() => setMobileOpen(false)} className="text-purple-600">Curse Tree</MobileNavLink>
+          {canAcademy ? (
+            <MobileNavLink href="/academy" onClick={() => setMobileOpen(false)} className="text-amber-600">Academy</MobileNavLink>
+          ) : (
+            <MobileNavDisabled title="Requires Rider form" className="text-yellow-900">Academy</MobileNavDisabled>
+          )}
+          <MobileNavLink href="/shadow-form" onClick={() => setMobileOpen(false)} className="text-indigo-600">Shadow Form</MobileNavLink>
+          {user?.role !== "player" && (
+            <MobileNavLink href="/admin" onClick={() => setMobileOpen(false)} className="text-red-500">Admin</MobileNavLink>
+          )}
+          <div className="pt-2 mt-1 border-t border-gray-800">
             <button
-              onClick={handleLogClick}
-              title={openPopup === "log" ? "Click again to open full log" : "Activity log"}
-              className={`text-sm font-mono transition-colors px-1 ${openPopup === "log" ? "text-amber-400" : "text-gray-600 hover:text-amber-400"}`}
+              onClick={logout}
+              disabled={loggingOut}
+              className="text-xs font-mono text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50"
             >
-              ▤
+              LOGOUT
             </button>
-            {openPopup === "log" && (
-              <div className="absolute right-0 top-8 w-72 bg-gray-950 border border-gray-800 shadow-xl z-50">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-                  <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Activity Log</span>
-                  <span className="text-[10px] font-mono text-amber-600 cursor-pointer hover:text-amber-400" onClick={() => { router.push("/logs"); setOpenPopup(null); }}>
-                    view all →
-                  </span>
-                </div>
-                {logLoading ? (
-                  <p className="text-xs font-mono text-gray-600 px-3 py-3">Loading...</p>
-                ) : logs.length === 0 ? (
-                  <p className="text-xs font-mono text-gray-600 px-3 py-3">No activity yet.</p>
-                ) : (
-                  <ul className="divide-y divide-gray-900">
-                    {logs.map((l) => (
-                      <li key={l._id} className="px-3 py-2">
-                        <p className="text-xs font-mono text-gray-300 leading-snug">{l.message}</p>
-                        <p className="text-[10px] font-mono text-gray-700 mt-0.5">{timeAgo(l.createdAt)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="px-3 py-2 border-t border-gray-800">
-                  <button onClick={() => { router.push("/logs"); setOpenPopup(null); }} className="text-[10px] font-mono text-amber-600 hover:text-amber-400">
-                    Click again to open full log page →
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
-        )}
-
-        {/* Notification bell */}
-        {user && (
-          <div className="relative">
-            <button
-              onClick={handleBellClick}
-              title={openPopup === "notif" ? "Click again to open full notifications" : "Notifications"}
-              className={`text-sm font-mono transition-colors px-1 relative ${openPopup === "notif" ? "text-cyan-400" : "text-gray-600 hover:text-cyan-400"}`}
-            >
-              ◉
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-mono rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5 leading-none">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
-            {openPopup === "notif" && (
-              <div className="absolute right-0 top-8 w-80 bg-gray-950 border border-gray-800 shadow-xl z-50">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-                  <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Notifications</span>
-                  <span className="text-[10px] font-mono text-cyan-600 cursor-pointer hover:text-cyan-400" onClick={() => { router.push("/notifications"); setOpenPopup(null); }}>
-                    view all →
-                  </span>
-                </div>
-                {notifLoading ? (
-                  <p className="text-xs font-mono text-gray-600 px-3 py-3">Loading...</p>
-                ) : notifs.length === 0 ? (
-                  <p className="text-xs font-mono text-gray-600 px-3 py-3">No notifications.</p>
-                ) : (
-                  <ul className="divide-y divide-gray-900">
-                    {notifs.map((n) => (
-                      <li key={n._id} className="px-3 py-2 space-y-1.5">
-                        <p className="text-xs font-mono text-gray-400 leading-snug">
-                          <NotifLabel n={n} />
-                        </p>
-                        <p className="text-[10px] font-mono text-gray-700">{timeAgo(n.createdAt)}</p>
-                        {isInvite(n) && n.status === "pending" && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => respondToInvite(n._id, "accept")}
-                              disabled={acting === n._id}
-                              className="text-[10px] font-mono text-green-400 hover:text-green-300 border border-green-800 hover:border-green-600 px-2 py-0.5 transition-colors disabled:opacity-50"
-                            >
-                              {acting === n._id ? "..." : "Accept"}
-                            </button>
-                            <button
-                              onClick={() => respondToInvite(n._id, "decline")}
-                              disabled={acting === n._id}
-                              className="text-[10px] font-mono text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-2 py-0.5 transition-colors disabled:opacity-50"
-                            >
-                              {acting === n._id ? "..." : "Decline"}
-                            </button>
-                          </div>
-                        )}
-                        {isInvite(n) && n.status !== "pending" && (
-                          <span className={`text-[10px] font-mono ${n.status === "accepted" ? "text-green-600" : "text-gray-600"}`}>
-                            {n.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="px-3 py-2 border-t border-gray-800">
-                  <button onClick={() => { router.push("/notifications"); setOpenPopup(null); }} className="text-[10px] font-mono text-cyan-600 hover:text-cyan-400">
-                    Click again to open full notifications page →
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <button
-          onClick={logout}
-          disabled={loggingOut}
-          className="text-xs font-mono text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50"
-        >
-          LOGOUT
-        </button>
-      </div>
+        </div>
+      )}
     </nav>
+  );
+}
+
+function MobileNavLink({
+  href,
+  onClick,
+  className = "",
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`text-sm font-mono py-2 px-2 text-gray-400 hover:text-gray-200 hover:bg-gray-900 transition-colors rounded ${className}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileNavDisabled({
+  title,
+  className = "",
+  children,
+}: {
+  title: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      title={title}
+      className={`text-sm font-mono py-2 px-2 text-gray-800 cursor-not-allowed select-none ${className}`}
+    >
+      {children}
+    </span>
   );
 }
