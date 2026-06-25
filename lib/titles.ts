@@ -18,6 +18,8 @@ export const TITLES: TitleDef[] = [
   { id: "beast-slayer",    label: "Beast Slayer",    min: 351, max: 400, color: "#dc2626", icon: "◤" },
   { id: "scientist",       label: "Scientist",       min: 401, max: 450, color: "#a855f7", icon: "◫" },
   { id: "sage",            label: "Sage",            min: 451, max: 500, color: "#f59e0b", icon: "✦" },
+  { id: "game-master",    label: "Game Master",     min: 501, max: 600, color: "#e879f9", icon: "✧" },
+  { id: "world-seeder",   label: "World Seeder",    min: 601, max: 700, color: "#ffffff", icon: "✺" },
 ];
 
 export function getTitle(level: number): TitleDef {
