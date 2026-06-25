@@ -505,6 +505,78 @@ API: `GET /api/admin/teams` · `PATCH /api/admin/teams { teamId, action: "suspen
 
 ---
 
+## Academy
+
+The Academy is an interactive knowledge tree at `/academy` where characters study fields of science, philosophy, mathematics, and the humanities to raise their **Intelligence** and **Agility** stats. Requires the **Rider** shadow form or higher.
+
+### Tree Structure
+
+The tree is rooted at **Philosophy** and branches across eight depth levels, covering 75+ fields:
+
+| Branch | Fields |
+|--------|--------|
+| Logic → Mathematics | Algebra → Linear Algebra, Abstract Algebra · Calculus → Differential Equations, Complex Analysis · Statistics → Probability Theory, Data Science · Geometry |
+| Logic → Computer Science | Algorithms → Graph Theory, Complexity Theory · Machine Learning → Neural Networks, Reinforcement Learning, Computer Vision |
+| Natural Philosophy → Physics | Classical Mechanics · Thermodynamics · Electromagnetism · Quantum Mechanics → Quantum Computing, Quantum Field Theory |
+| Natural Philosophy → Chemistry | Organic Chemistry · Biochemistry · Materials Science → Nanotechnology, Metamaterials |
+| Natural Philosophy → Biology | Genetics → Genomics, Epigenetics · Neuroscience → Neuromorphic Computing, Brain Mapping · Ecology |
+| Natural Philosophy → Astronomy | Astrophysics → Planetary Science, Dark Matter · Cosmology |
+| Epistemology | Metaphysics → Ontology, Philosophy of Mind · Ethics · Psychology → Cognitive Science → Consciousness Studies, Cognitive Linguistics · Behavioral Science |
+| Social Philosophy | Political Science → Jurisprudence · Economics → Game Theory → Mechanism Design · Sociology → Anthropology |
+| Humanities | History → Archaeology · Linguistics → Semiotics · Arts → Music Theory, Literature |
+
+Fields deeper in the tree must be unlocked before their children become available.
+
+### Unlock & Upgrade
+
+- **Unlock** a field: costs **50 merits** (parent field must be unlocked first)
+- **Upgrade** a field: cost scales as `floor(100 × level^1.2)` merits
+- Each level grants **+1 to the field's stat** (INT or AGI)
+- Maximum field level: **700**
+
+### Level Color Grades
+
+Field nodes on the canvas change color as they level up:
+
+| Level Range | Color |
+|-------------|-------|
+| 1 – 50 | Cyan `#00e5ff` |
+| 51 – 100 | Teal `#00ccee` |
+| 101 – 150 | Aqua `#00ffcc` |
+| 151 – 200 | Green `#00ff88` |
+| 201 – 250 | Lime `#55ff44` |
+| 251 – 300 | Yellow-green `#aaff00` |
+| 301 – 350 | Yellow `#ffee00` |
+| 351 – 400 | Amber `#ffaa00` |
+| 401 – 450 | Orange `#ff5500` |
+| 451 – 500 | Gold `#ffd700` |
+| 501 – 600 | Fuchsia `#e879f9` |
+| 601 – 700 | White `#ffffff` |
+
+### Title System
+
+Each field awards a title based on its current level (see [Title System](#title-system-academy-based)). Titles are earned independently per field — you can be a **Sage** in Algorithms while still a **Scavenger** in Quantum Computing.
+
+### Canvas UI
+
+The academy tree is rendered on an interactive canvas:
+- **Pan** — drag (mouse) or swipe (touch)
+- **Zoom** — scroll wheel or pinch-to-zoom
+- **Select** — click or tap a node to open the upgrade panel
+- Node radius scales with level (L1 = 7 px → L700 = ~42 px)
+- Edge colors match the child node's level color
+
+### Academy API
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/academy | Get character's academy tree |
+| POST | /api/academy | Unlock or upgrade a field |
+
+`POST /api/academy` body: `{ fieldId, action: "unlock" | "upgrade" }`
+
+---
+
 ## 🗺️ Roadmap
 
 > DreameForge is built across three epochs — from browser game to mobile to full AAA title.
