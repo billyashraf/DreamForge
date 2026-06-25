@@ -18,7 +18,15 @@ function getTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 10_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 15_000,
   });
+}
+
+function getFrom() {
+  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
+  return `"DreameForge" <${process.env.SMTP_USER}>`;
 }
 
 async function sendMail(options: nodemailer.SendMailOptions) {
@@ -39,7 +47,7 @@ async function sendMail(options: nodemailer.SendMailOptions) {
 export async function sendVerificationEmail(to: string, token: string) {
   const url = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-email?token=${token}`;
   await sendMail({
-    from: `"DreameForge" <${process.env.SMTP_USER}>`,
+    from: getFrom(),
     to,
     subject: "Verify your DreameForge account",
     html: `
@@ -56,7 +64,7 @@ export async function sendVerificationEmail(to: string, token: string) {
 export async function sendPasswordResetEmail(to: string, token: string) {
   const url = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
   await sendMail({
-    from: `"DreameForge" <${process.env.SMTP_USER}>`,
+    from: getFrom(),
     to,
     subject: "Reset your DreameForge password",
     html: `
