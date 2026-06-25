@@ -1,11 +1,11 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import User from "@/models/User";
 import Character from "@/models/Character";
 
-async function requireAdmin() {
+async function requireStaff() {
   const session = await getSession();
   if (!session) return { session: null, error: unauthorized() };
   if (session.role !== "admin" && session.role !== "moderator") return { session: null, error: forbidden() };
@@ -13,7 +13,7 @@ async function requireAdmin() {
 }
 
 export async function GET(req: NextRequest) {
-  const { session, error } = await requireAdmin();
+  const { session, error } = await requireStaff();
   if (!session) return error;
 
   await connectDB();
@@ -39,39 +39,70 @@ export async function GET(req: NextRequest) {
   return ok({ users, total, page, pages: Math.ceil(total / limit) });
 }
 
+const ROLE_LEVEL: Record<string, number> = { player: 0, moderator: 1, admin: 2 };
+
 export async function PATCH(req: NextRequest) {
-  const { session, error } = await requireAdmin();
+  const { session, error } = await requireStaff();
   if (!session) return error;
 
   const body = await req.json().catch(() => null);
   if (!body?.userId) return err("userId is required");
 
-  const { userId, action, reason, role } = body;
+  const { userId, action, reason } = body;
 
   await connectDB();
 
   const target = await User.findById(userId);
   if (!target) return err("User not found", 404);
 
-  if (role === "admin" && session.role !== "admin") return forbidden();
+  const actorLevel = ROLE_LEVEL[session.role] ?? 0;
+  const targetLevel = ROLE_LEVEL[target.role] ?? 0;
 
   switch (action) {
     case "ban":
+      // Moderators can only ban players; admins can ban anyone below them
+      if (actorLevel <= targetLevel) return forbidden();
       target.isBanned = true;
       target.banReason = reason ?? "Policy violation";
       break;
+
     case "unban":
+      if (actorLevel <= targetLevel) return forbidden();
       target.isBanned = false;
       target.banReason = undefined;
       break;
-    case "setRole":
-      if (!["player", "moderator", "admin"].includes(role)) return err("Invalid role");
-      target.role = role;
+
+    case "promote_moderator":
+      if (session.role !== "admin" && session.role !== "moderator") return forbidden();
+      if (target.role !== "player") return err("Can only promote players to moderator");
+      target.role = "moderator";
       break;
+
+    case "promote_admin":
+      if (session.role !== "admin") return forbidden();
+      if (target.role === "admin") return err("Already an admin");
+      target.role = "admin";
+      break;
+
+    case "demote_player":
+      if (session.role !== "admin") return forbidden();
+      if (target.role === "player") return err("Already a player");
+      if (target.role === "admin") return forbidden();
+      target.role = "player";
+      break;
+
+    case "demote_moderator":
+      if (session.role !== "admin") return forbidden();
+      if (target.role !== "admin") return err("Can only demote admins to moderator");
+      target.role = "moderator";
+      break;
+
     case "deleteCharacter": {
+      if (actorLevel <= targetLevel) return forbidden();
       await Character.findOneAndDelete({ userId: target._id });
       break;
     }
+
     default:
       return err("Unknown action");
   }

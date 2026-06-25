@@ -185,6 +185,14 @@ export function Navbar() {
 
   return (
     <nav className="bg-gray-950 border-b border-gray-800 relative z-50">
+      {/* Mobile backdrop for popups */}
+      {openPopup && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 sm:hidden"
+          onClick={() => setOpenPopup(null)}
+        />
+      )}
+
       {/* Main bar */}
       <div className="px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-6">
@@ -224,7 +232,12 @@ export function Navbar() {
             <span className="text-[10px] font-mono text-gray-700 hidden sm:block uppercase tracking-widest">◆ {shadowForm}</span>
           )}
           {user && (
-            <span className="text-xs font-mono text-gray-600 hidden sm:block">[{user.role.toUpperCase()}] {user.username}</span>
+            <span className="text-xs font-mono text-gray-600 hidden sm:block">
+              [{user.role.toUpperCase()}] {user.username}
+              {!user.emailVerified && (
+                <span className="ml-1.5 text-[9px] font-mono text-orange-400 border border-orange-800 px-1 py-0.5 align-middle">UNVERIFIED</span>
+              )}
+            </span>
           )}
 
           {/* Log icon */}
@@ -238,7 +251,7 @@ export function Navbar() {
                 ▤
               </button>
               {openPopup === "log" && (
-                <div className="absolute right-0 top-8 w-72 bg-gray-950 border border-gray-800 shadow-xl z-50">
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-32px)] max-w-xs sm:absolute sm:top-8 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 sm:w-72 bg-gray-950 border border-gray-800 shadow-xl">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
                     <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Activity Log</span>
                     <span className="text-[10px] font-mono text-amber-600 cursor-pointer hover:text-amber-400" onClick={() => { router.push("/logs"); setOpenPopup(null); }}>
@@ -250,7 +263,7 @@ export function Navbar() {
                   ) : logs.length === 0 ? (
                     <p className="text-xs font-mono text-gray-600 px-3 py-3">No activity yet.</p>
                   ) : (
-                    <ul className="divide-y divide-gray-900">
+                    <ul className="divide-y divide-gray-900 max-h-72 overflow-y-auto">
                       {logs.map((l) => (
                         <li key={l._id} className="px-3 py-2">
                           <p className="text-xs font-mono text-gray-300 leading-snug">{l.message}</p>
@@ -285,7 +298,7 @@ export function Navbar() {
                 )}
               </button>
               {openPopup === "notif" && (
-                <div className="absolute right-0 top-8 w-80 bg-gray-950 border border-gray-800 shadow-xl z-50">
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-32px)] max-w-xs sm:absolute sm:top-8 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 sm:w-80 bg-gray-950 border border-gray-800 shadow-xl">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
                     <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Notifications</span>
                     <span className="text-[10px] font-mono text-cyan-600 cursor-pointer hover:text-cyan-400" onClick={() => { router.push("/notifications"); setOpenPopup(null); }}>
@@ -297,7 +310,7 @@ export function Navbar() {
                   ) : notifs.length === 0 ? (
                     <p className="text-xs font-mono text-gray-600 px-3 py-3">No notifications.</p>
                   ) : (
-                    <ul className="divide-y divide-gray-900">
+                    <ul className="divide-y divide-gray-900 max-h-72 overflow-y-auto">
                       {notifs.map((n) => (
                         <li key={n._id} className="px-3 py-2 space-y-1.5">
                           <p className="text-xs font-mono text-gray-400 leading-snug">
@@ -352,6 +365,20 @@ export function Navbar() {
             </Link>
           )}
 
+          {/* Settings icon */}
+          {user && (
+            <Link
+              href="/settings"
+              title="Settings"
+              className="text-sm font-mono text-gray-600 hover:text-gray-300 transition-colors px-1 relative"
+            >
+              ⚙
+              {!user.emailVerified && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full" />
+              )}
+            </Link>
+          )}
+
           <button
             onClick={logout}
             disabled={loggingOut}
@@ -378,7 +405,12 @@ export function Navbar() {
         <div className="md:hidden border-t border-gray-800 bg-gray-950 px-4 py-3 flex flex-col gap-1">
           {user && (
             <div className="flex items-center justify-between pb-2 mb-1 border-b border-gray-800">
-              <span className="text-xs font-mono text-gray-500">[{user.role.toUpperCase()}] {user.username}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-gray-500">[{user.role.toUpperCase()}] {user.username}</span>
+                {!user.emailVerified && (
+                  <span className="text-[9px] font-mono text-orange-400 border border-orange-800 px-1 py-0.5">UNVERIFIED</span>
+                )}
+              </div>
               {shadowForm && <span className="text-[10px] font-mono text-gray-700 uppercase tracking-widest">◆ {shadowForm}</span>}
             </div>
           )}
@@ -404,6 +436,9 @@ export function Navbar() {
           <MobileNavLink href="/shadow-form" onClick={() => setMobileOpen(false)} className="text-indigo-600">Shadow Form</MobileNavLink>
           {character && (
             <MobileNavLink href={`/profile/${character.id}`} onClick={() => setMobileOpen(false)} className="text-cyan-600">My Profile</MobileNavLink>
+          )}
+          {user && (
+            <MobileNavLink href="/settings" onClick={() => setMobileOpen(false)} className="text-gray-400">⚙ Settings</MobileNavLink>
           )}
           {user?.role !== "player" && (
             <MobileNavLink href="/admin" onClick={() => setMobileOpen(false)} className="text-red-500">Admin</MobileNavLink>

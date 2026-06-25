@@ -16,15 +16,24 @@ const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   google_userinfo:       "Failed to retrieve Google account info.",
   google_no_email:       "Your Google account has no verified email address.",
   banned:                "Your account has been suspended.",
+  invalid_token:         "Verification link is invalid.",
+  token_expired:         "Verification link has expired. Please request a new one from Settings.",
 };
 
 // useSearchParams must live inside a Suspense boundary in Next.js App Router
-function OAuthErrorReader({ onError }: { onError: (msg: string) => void }) {
+function ParamReader({
+  onError,
+  onVerified,
+}: {
+  onError: (msg: string) => void;
+  onVerified: () => void;
+}) {
   const searchParams = useSearchParams();
   useEffect(() => {
     const oauthError = searchParams.get("error");
-    if (oauthError) onError(GOOGLE_ERROR_MESSAGES[oauthError] ?? "Google sign-in failed.");
-  }, [searchParams, onError]);
+    if (oauthError) onError(GOOGLE_ERROR_MESSAGES[oauthError] ?? "Sign-in failed.");
+    if (searchParams.get("verified") === "1") onVerified();
+  }, [searchParams, onError, onVerified]);
   return null;
 }
 
@@ -34,6 +43,7 @@ export default function LoginPage() {
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<"player" | "admin" | null>(null);
 
@@ -88,7 +98,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <Suspense fallback={null}>
-        <OAuthErrorReader onError={setError} />
+        <ParamReader onError={setError} onVerified={() => setVerified(true)} />
       </Suspense>
       <div className="w-full max-w-sm space-y-4">
         <div className="text-center">
@@ -98,6 +108,12 @@ export default function LoginPage() {
           </Link>
           <p className="text-xs font-mono text-gray-600 mt-1 uppercase tracking-widest">Access Terminal</p>
         </div>
+
+        {verified && (
+          <div className="border border-green-800 bg-green-950/20 p-3 text-center">
+            <p className="text-xs font-mono text-green-400">✓ Account verified! You can now log in.</p>
+          </div>
+        )}
 
         {/* Google sign-in */}
         <a
@@ -177,11 +193,16 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="text-center text-xs font-mono text-gray-600">
-          No account?{" "}
-          <Link href="/register" className="text-cyan-500 hover:text-cyan-400">Register here</Link>
-          {" "}or{" "}
-          <Link href="/" className="text-gray-500 hover:text-gray-400">back to home</Link>
+        <div className="text-center text-xs font-mono text-gray-600 space-y-1">
+          <div>
+            No account?{" "}
+            <Link href="/register" className="text-cyan-500 hover:text-cyan-400">Register here</Link>
+            {" "}or{" "}
+            <Link href="/" className="text-gray-500 hover:text-gray-400">back to home</Link>
+          </div>
+          <div>
+            <Link href="/settings" className="text-gray-500 hover:text-gray-400">Forgot password?</Link>
+          </div>
         </div>
       </div>
     </main>

@@ -1,11 +1,13 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { connectDB } from "@/lib/db";
 import { signToken, createSessionCookie } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rateLimit";
 import { ok, err } from "@/lib/response";
 import User from "@/models/User";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "unknown";
@@ -32,12 +34,28 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await User.create({ username, email, passwordHash });
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  const user = await User.create({
+    username,
+    email,
+    passwordHash,
+    verificationToken,
+    verificationTokenExpiry,
+  });
+
+  // Send verification email (non-blocking)
+  try {
+    await sendVerificationEmail(email, verificationToken);
+  } catch (e) {
+    console.error("[register] email send failed:", e);
+  }
 
   const token = signToken({ userId: user._id.toString(), email: user.email, role: user.role });
   const cookie = createSessionCookie(token);
 
-  const response = ok({ message: "Account created successfully", userId: user._id }, 201);
+  const response = ok({ message: "Account created successfully. Check your email to verify your account.", userId: user._id }, 201);
   response.headers.set("Set-Cookie", cookie);
   return response;
 }

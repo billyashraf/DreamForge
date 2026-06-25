@@ -11,12 +11,15 @@ interface AdminUser {
   _id: string;
   username: string;
   email: string;
-  role: string;
+  role: "player" | "moderator" | "admin";
   isBanned: boolean;
+  isVerified: boolean;
   banReason?: string;
   createdAt: string;
   lastLogin: string;
 }
+
+const ROLE_LEVEL: Record<string, number> = { player: 0, moderator: 1, admin: 2 };
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -58,6 +61,7 @@ export default function AdminUsersPage() {
 
   async function applyAction(userId: string, action: string, extra: Record<string, string> = {}) {
     setActing(userId + action);
+    setStatusMsg("");
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -68,6 +72,8 @@ export default function AdminUsersPage() {
     setActing(null);
     if (res.ok) fetchUsers();
   }
+
+  const actorLevel = ROLE_LEVEL[user?.role ?? "player"] ?? 0;
 
   return (
     <div className="space-y-4">
@@ -105,73 +111,118 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
-                  <tr key={u._id} className="border-b border-gray-900 hover:bg-gray-900">
-                    <td className="py-2 pr-4 text-gray-300">{u.username}</td>
-                    <td className="py-2 pr-4 text-gray-500">{u.email}</td>
-                    <td className="py-2 pr-4">
-                      <span className={u.role === "admin" ? "text-red-400" : u.role === "moderator" ? "text-yellow-400" : "text-gray-500"}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4">
-                      {u.isBanned ? (
-                        <span className="text-red-400">BANNED</span>
-                      ) : (
-                        <span className="text-green-400">ACTIVE</span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-600">
-                      {new Date(u.lastLogin).toLocaleDateString()}
-                    </td>
-                    <td className="py-2">
-                      <div className="flex gap-2">
-                        {!u.isBanned ? (
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            loading={acting === u._id + "ban"}
-                            onClick={() => {
-                              const reason = prompt("Ban reason:") ?? "Policy violation";
-                              applyAction(u._id, "ban", { reason });
-                            }}
-                          >
-                            Ban
-                          </Button>
+                {users.map((u) => {
+                  const targetLevel = ROLE_LEVEL[u.role] ?? 0;
+                  const canAct = actorLevel > targetLevel;
+                  return (
+                    <tr key={u._id} className="border-b border-gray-900 hover:bg-gray-900">
+                      <td className="py-2 pr-4 text-gray-300">{u.username}</td>
+                      <td className="py-2 pr-4 text-gray-500">{u.email}</td>
+                      <td className="py-2 pr-4">
+                        <span className={
+                          u.role === "admin" ? "text-red-400" :
+                          u.role === "moderator" ? "text-yellow-400" :
+                          "text-gray-500"
+                        }>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 space-y-0.5">
+                        {u.isBanned ? (
+                          <span className="text-red-400 block">BANNED</span>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="success"
-                            loading={acting === u._id + "unban"}
-                            onClick={() => applyAction(u._id, "unban")}
-                          >
-                            Unban
-                          </Button>
+                          <span className="text-green-400 block">ACTIVE</span>
                         )}
-                        {user?.role === "admin" && u.role === "player" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            loading={acting === u._id + "setRole"}
-                            onClick={() => applyAction(u._id, "setRole", { role: "moderator" })}
-                          >
-                            Promote
-                          </Button>
+                        {!u.isVerified && (
+                          <span className="text-orange-400 block text-[10px]">UNVERIFIED</span>
                         )}
-                        {user?.role === "admin" && u.role === "moderator" && (
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            loading={acting === u._id + "setRole"}
-                            onClick={() => applyAction(u._id, "setRole", { role: "player" })}
-                          >
-                            Demote
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-600">
+                        {new Date(u.lastLogin).toLocaleDateString()}
+                      </td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {/* Ban / Unban — moderators can ban players, admins can ban mods/players */}
+                          {canAct && !u.isBanned && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={acting === u._id + "ban"}
+                              onClick={() => {
+                                const reason = prompt("Ban reason:") ?? "Policy violation";
+                                applyAction(u._id, "ban", { reason });
+                              }}
+                            >
+                              Ban
+                            </Button>
+                          )}
+                          {canAct && u.isBanned && (
+                            <Button
+                              size="sm"
+                              variant="success"
+                              loading={acting === u._id + "unban"}
+                              onClick={() => applyAction(u._id, "unban")}
+                            >
+                              Unban
+                            </Button>
+                          )}
+
+                          {/* Promote to moderator — mods and admins can promote players */}
+                          {(user?.role === "admin" || user?.role === "moderator") && u.role === "player" && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={acting === u._id + "promote_moderator"}
+                              onClick={() => applyAction(u._id, "promote_moderator")}
+                            >
+                              →Mod
+                            </Button>
+                          )}
+
+                          {/* Promote to admin — admin only */}
+                          {user?.role === "admin" && u.role === "moderator" && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={acting === u._id + "promote_admin"}
+                              onClick={() => {
+                                if (confirm(`Promote ${u.username} to admin?`)) {
+                                  applyAction(u._id, "promote_admin");
+                                }
+                              }}
+                            >
+                              →Admin
+                            </Button>
+                          )}
+
+                          {/* Demote admin → moderator */}
+                          {user?.role === "admin" && u.role === "admin" && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={acting === u._id + "demote_moderator"}
+                              onClick={() => applyAction(u._id, "demote_moderator")}
+                            >
+                              →Mod
+                            </Button>
+                          )}
+
+                          {/* Demote moderator → player */}
+                          {user?.role === "admin" && u.role === "moderator" && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={acting === u._id + "demote_player"}
+                              onClick={() => applyAction(u._id, "demote_player")}
+                            >
+                              →Player
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

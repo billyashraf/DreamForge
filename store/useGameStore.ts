@@ -61,6 +61,7 @@ interface UserState {
   username: string;
   email: string;
   role: string;
+  emailVerified?: boolean;
 }
 
 interface GameLog {

@@ -12,7 +12,7 @@ A full-stack text MMORPG built with Next.js, MongoDB, and Zustand. Choose a Shad
 
 ```bash
 npm install
-cp .env.local.example .env.local   # set MONGODB_URI and JWT_SECRET
+cp .env.example .env.local   # set MONGODB_URI, JWT_SECRET, SMTP_*, NEXT_PUBLIC_APP_URL
 npm run dev
 ```
 
@@ -85,6 +85,63 @@ Each form unlocks specific content. Choose your form at /shadow-form.
 | Junkyard Wolves | junkyard scavenging | Lyra |
 | Earth Reclamation | earth exploration | Kade |
 | Mars Vanguard | mars territory | Zara |
+
+---
+
+## Account Verification & Security
+
+### Email Verification
+
+When a player registers, a **verification email** is sent with a one-time link. Until the account is verified:
+
+- A bright **UNVERIFIED** badge appears in the navbar next to the username (desktop) and in the mobile drawer header
+- The ⚙ **Settings icon** in the navbar shows an orange dot indicator
+- The player can still log in and play, but the badge is always visible
+
+When the link is clicked:
+- The account is marked verified, the badge disappears
+- The player is redirected to the login page with a green `✓ Account verified!` banner
+
+**Unverified accounts** that are not verified within **5 days** are automatically deleted by the cleanup endpoint.
+
+Cleanup endpoint (call from a daily cron job):
+```
+DELETE /api/auth/cleanup-unverified
+Header: x-cleanup-secret: <CLEANUP_SECRET>
+```
+
+Google OAuth accounts are always considered verified (email comes from Google).
+
+### Password Reset
+
+Players can request a password reset from the **Settings page** (`/settings`) or via the **Forgot password?** link on the login page.
+
+Flow:
+1. Player enters their email → `POST /api/auth/forgot-password`
+2. Server sends a reset link valid for **1 hour**
+3. Player clicks the link → `/reset-password?token=…`
+4. Player enters and confirms a new password → `POST /api/auth/reset-password`
+5. Password updated, redirected to login
+
+Password requirements: 8+ characters, at least 1 uppercase letter, at least 1 number.
+
+### Settings Page
+
+`/settings` — accessible via the ⚙ icon in the navbar (also in the mobile drawer):
+
+- **Account Status** — shows email, role, and verification status
+- **Resend Verification** — appears only for unverified accounts; sends a new verification email
+- **Change Password** — enter email to receive a password reset link
+
+### New Auth API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/auth/verify-email?token= | Verify email from link (redirects to login) |
+| POST | /api/auth/resend-verification | Resend verification email (session required) |
+| POST | /api/auth/forgot-password | Send password reset email |
+| POST | /api/auth/reset-password | Set new password with reset token |
+| DELETE | /api/auth/cleanup-unverified | Delete unverified accounts older than 5 days |
 
 ---
 
@@ -466,6 +523,24 @@ Every significant action a player takes (or that happens to them) is recorded in
 
 API: `GET /api/logs?page=N`
 
+#### Admin Role Management
+
+Admins and moderators manage user roles at `/admin/users`. Permissions are hierarchical — no one can act on an account at their own level or above.
+
+| Action | Moderator | Admin |
+|--------|-----------|-------|
+| Ban player | ✓ | ✓ |
+| Unban player | ✓ | ✓ |
+| Ban moderator | ✗ | ✓ |
+| Promote player → moderator | ✓ | ✓ |
+| Promote moderator → admin | ✗ | ✓ |
+| Demote admin → moderator | ✗ | ✓ |
+| Demote moderator → player | ✗ | ✓ |
+
+The user list now shows an **UNVERIFIED** label in orange for accounts that haven't confirmed their email.
+
+API: `PATCH /api/admin/users { userId, action: "ban"|"unban"|"promote_moderator"|"promote_admin"|"demote_player"|"demote_moderator" }`
+
 #### Admin Guild Management
 
 Admins and moderators can manage all guilds at `/admin/guilds`:
@@ -702,6 +777,6 @@ Elevate DreameForge from a browser game into a full-scale gaming product.
 
 - Frontend: Next.js App Router, Tailwind CSS, Zustand
 - Backend: Next.js Route Handlers, Mongoose/MongoDB
-- Auth: JWT httpOnly cookies, 7-day expiry
+- Auth: JWT httpOnly cookies, 7-day expiry; email verification; password reset via nodemailer
 - Canvas: Curse Tree + Academy with zoom/pan and Reingold-Tilford layout
 - Deployment: Vercel + MongoDB Atlas

@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
       return err(`Account suspended. Reason: ${user.banReason ?? "Policy violation"}`, 403);
     }
 
+    if (!user.isVerified) {
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const age = Date.now() - new Date(user.createdAt).getTime();
+      if (age > FIVE_DAYS_MS) {
+        return err("Account expired. Unverified accounts are deleted after 5 days. Please register again.", 403);
+      }
+      // Allow login for recent unverified accounts — they see the UNVERIFIED badge in navbar
+    }
+
     if (!user.passwordHash) {
       return err("This account was created with Google sign-in. Use the 'Sign in with Google' button.", 400);
     }
@@ -58,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const response = ok({
       message: "Login successful",
-      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+      user: { id: user._id, username: user.username, email: user.email, role: user.role, emailVerified: user.isVerified },
       hasCharacter: !!character,
       character: character
         ? { id: character._id.toString(), ...character.toObject() }

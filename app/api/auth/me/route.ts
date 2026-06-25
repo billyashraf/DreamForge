@@ -12,7 +12,7 @@ export async function GET() {
   await connectDB();
 
   const user = await User.findById(session.userId).select("-passwordHash");
-  if (!user) return unauthorized();
+  if (!user || user.isBanned) return unauthorized();
 
   const character = await Character.findOne({ userId: user._id }).select(
     "name level experience health maxHealth energy maxEnergy credits strength intelligence agility skills currentLocation guildId guildIds teamId teamIds owlReturnAt lastEnergyRegen lastHealthRegen shadowForm merits pain maxPain madness lastPainUpdate lastMadnessUpdate isDead poisonedUntil lastPoisonTick"
@@ -31,7 +31,7 @@ export async function GET() {
   }
 
   return ok({
-    user: { id: user._id, username: user.username, email: user.email, role: user.role },
+    user: { id: user._id, username: user.username, email: user.email, role: user.role, emailVerified: user.isVerified },
     character: character
       ? { id: character._id.toString(), ...character.toObject() }
       : null,

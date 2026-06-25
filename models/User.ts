@@ -9,6 +9,10 @@ export interface IUser extends Document {
   isVerified: boolean;
   isBanned: boolean;
   banReason?: string;
+  verificationToken?: string | null;
+  verificationTokenExpiry?: Date | null;
+  passwordResetToken?: string | null;
+  passwordResetExpiry?: Date | null;
   createdAt: Date;
   lastLogin: Date;
 }
@@ -23,6 +27,10 @@ const UserSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
     isBanned: { type: Boolean, default: false },
     banReason: { type: String },
+    verificationToken: { type: String, default: null },
+    verificationTokenExpiry: { type: Date, default: null },
+    passwordResetToken: { type: String, default: null },
+    passwordResetExpiry: { type: Date, default: null },
     lastLogin: { type: Date, default: Date.now },
   },
   { timestamps: true }
