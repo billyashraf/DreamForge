@@ -473,9 +473,56 @@ API: `GET /api/admin/teams` · `PATCH /api/admin/teams { teamId, action: "suspen
 | GET/PATCH | /api/admin/guilds | Admin: list all guilds / suspend/delete |
 | GET/PATCH | /api/admin/teams | Admin: list all teams / suspend/delete |
 
+---
+
+## 🗺️ Roadmap
+
+### ✅ Completed Phases
+
+- ✅ **Phase 1** — Auth, character creation, dashboard
+- ✅ **Phase 2** — Missions, combat, inventory & market
+- ✅ **Phase 3** — Shadow Form system, locations & travel
+- ✅ **Phase 4** — Curse Tree, Academy, shadow owl messaging
+- ✅ **Phase 5** — Guild system (apply, rank, positions, chat)
+- ✅ **Phase 6** — Admin panel (users, missions, guilds)
+- ✅ **Phase 7** — Live chat (team telepathy & guild echo)
+- ✅ **Phase 8** — Character profiles, commit log, People browser
+- ✅ **Phase 9** — Team system (multi-team, applications, invite)
+- ✅ **Phase 10** — Notifications & activity log
+- ✅ **Phase 11** — Admin team management
+
+### 🔲 Upcoming Phases
+
+#### ⚔️ Phase 12 — Mars Chess: Battle Royale Mechanics
+
+A competitive PvP layer set on Mars where guilds and players clash in a chess-inspired battle royale format.
+
+- [ ] Turn-based Mars territory map — guilds claim and contest zones
+- [ ] Chess piece roles mapped to Shadow Forms (King/Queen/Rook/Bishop/Knight/Pawn)
+- [ ] Battle resolution engine — strength, agility & strategy stats influence outcomes
+- [ ] Season system — weekly resets, leaderboard, Mars Rating rewards
+- [ ] Spectator mode — watch live battles from the dashboard
+- [ ] Guild war declarations — challenge rival guilds for territory control
+- [ ] Battle royale events — last guild standing wins seasonal rewards
+
+#### 🌐 Phase 13 — Web3 Integration
+
+Bringing true ownership and decentralized economy to the DreameForge universe.
+
+- [ ] Wallet connect — MetaMask / WalletConnect sign-in alongside existing auth
+- [ ] Shadow Form NFTs — mint your unlocked form as an on-chain asset
+- [ ] On-chain credits — wrap in-game currency as ERC-20 tokens
+- [ ] NFT marketplace — trade Shadow Forms, rare items, and guild emblems
+- [ ] Smart contract guilds — guild treasury held on-chain, votes for spending
+- [ ] Play-to-earn rewards — Mars Rating converted to token drops at season end
+- [ ] Chain: TBD (Ethereum L2 / Polygon / Base)
+
+---
+
 ## Stack
 
-- Frontend: Next.js 15 App Router, Tailwind CSS, Zustand
+- Frontend: Next.js App Router, Tailwind CSS, Zustand
 - Backend: Next.js Route Handlers, Mongoose/MongoDB
 - Auth: JWT httpOnly cookies, 7-day expiry
 - Canvas: Curse Tree + Academy with zoom/pan and Reingold-Tilford layout
+- Deployment: Vercel + MongoDB Atlas
