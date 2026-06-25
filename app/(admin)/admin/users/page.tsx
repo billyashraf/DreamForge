@@ -218,6 +218,22 @@ export default function AdminUsersPage() {
                               →Player
                             </Button>
                           )}
+
+                          {/* Delete user — admin only, cannot delete other admins */}
+                          {user?.role === "admin" && u.role !== "admin" && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={acting === u._id + "delete_user"}
+                              onClick={() => {
+                                if (confirm(`Permanently delete "${u.username}"? This cannot be undone.`)) {
+                                  applyAction(u._id, "delete_user");
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

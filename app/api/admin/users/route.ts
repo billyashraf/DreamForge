@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import User from "@/models/User";
 import Character from "@/models/Character";
+import { deleteAccount } from "@/lib/deleteAccount";
 
 async function requireStaff() {
   const session = await getSession();
@@ -101,6 +102,16 @@ export async function PATCH(req: NextRequest) {
       if (actorLevel <= targetLevel) return forbidden();
       await Character.findOneAndDelete({ userId: target._id });
       break;
+    }
+
+    case "delete_user": {
+      // Admin only; cannot delete other admins or yourself
+      if (session.role !== "admin") return forbidden();
+      if (target.role === "admin") return forbidden();
+      if (target._id.toString() === session.userId) return err("Cannot delete your own account here");
+      const username = target.username;
+      await deleteAccount(target._id.toString());
+      return ok({ message: `Account "${username}" permanently deleted` });
     }
 
     default:

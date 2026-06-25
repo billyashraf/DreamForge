@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, setUser, setCharacter } = useGameStore();
+  const { user, setUser, setCharacter, reset } = useGameStore();
 
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState("");
@@ -17,6 +17,10 @@ export default function SettingsPage() {
 
   const [resendMsg, setResendMsg] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
+
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -59,6 +63,29 @@ export default function SettingsPage() {
       setResendMsg("Connection error. Please try again.");
     } finally {
       setResendLoading(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm !== user?.username) {
+      setDeleteError("Username does not match.");
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/auth/account", { method: "DELETE" });
+      if (res.ok) {
+        reset();
+        router.push("/login");
+      } else {
+        const data = await res.json();
+        setDeleteError(data.error ?? "Failed to delete account.");
+      }
+    } catch {
+      setDeleteError("Connection error. Please try again.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -145,6 +172,39 @@ export default function SettingsPage() {
               Send Reset Link
             </Button>
           </form>
+        </Card>
+        {/* Danger zone — delete account */}
+        <Card title="Danger Zone">
+          <p className="text-xs font-mono text-gray-500 mb-4">
+            Permanently delete your account and all associated data (character, guilds led, teams led).
+            This action <span className="text-red-400 font-bold">cannot be undone</span>.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-mono text-gray-500 mb-1">
+                Type your username <span className="text-gray-300">{user.username}</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => { setDeleteConfirm(e.target.value); setDeleteError(""); }}
+                placeholder={user.username}
+                className="w-full bg-gray-900 border border-gray-700 text-xs font-mono text-gray-200 px-3 py-2 focus:outline-none focus:border-red-700"
+              />
+            </div>
+            {deleteError && (
+              <p className="text-xs font-mono text-red-400">ERROR: {deleteError}</p>
+            )}
+            <Button
+              variant="danger"
+              size="sm"
+              loading={deleteLoading}
+              disabled={deleteConfirm !== user.username}
+              onClick={handleDeleteAccount}
+            >
+              Delete My Account
+            </Button>
+          </div>
         </Card>
       </div>
     </div>
