@@ -16,8 +16,9 @@ function isSmtpConfigured(): boolean {
 }
 
 function getFrom(): string {
-  if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
-  // onboarding@resend.dev is the Resend-provided test sender, usable via their HTTP API
+  const configured = process.env.SMTP_FROM;
+  // SMTP_FROM must be a full email address (e.g. noreply@glassmasks.com), not just a domain
+  if (configured && configured.includes("@")) return configured;
   if (isResendProvider()) return "onboarding@resend.dev";
   return `"DreameForge" <${process.env.SMTP_USER}>`;
 }
