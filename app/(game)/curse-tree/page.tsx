@@ -758,7 +758,7 @@ export default function CurseTreePage() {
           const statColor  = STAT_GLOW[skillStat];
           const atMax      = selLevel >= MAX_CURSE_LEVEL;
           return (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:top-auto sm:translate-y-0 sm:bottom-5 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
             <div className="min-w-0 sm:min-w-[130px]">
               <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Skill</div>
               <div className="text-base font-bold mt-0.5" style={{ color: isActivated ? levelColor(selLevel) : "#00e5ff" }}>
@@ -818,7 +818,7 @@ export default function CurseTreePage() {
 
         {/* Link panel — responsive */}
         {selLink && !selParticle && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-yellow-900/50 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:top-auto sm:translate-y-0 sm:bottom-5 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-yellow-900/50 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
             <div className="min-w-0 sm:min-w-[160px]">
               <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Link</div>
               <div className="font-bold mt-0.5" style={{ color: linkSelColor(selLink.weight) }}>

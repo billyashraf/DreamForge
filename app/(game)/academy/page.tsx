@@ -589,7 +589,7 @@ export default function AcademyPage() {
           const statColor = ACADEMY_STAT_GLOW[selField.stat];
           const statLabel = ACADEMY_STAT_LABEL[selField.stat];
           return (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:top-auto sm:translate-y-0 sm:bottom-5 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
               <div className="min-w-0 sm:min-w-[150px]">
                 <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Field</div>
                 <div className="text-base font-bold mt-0.5"

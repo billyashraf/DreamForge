@@ -293,13 +293,13 @@ export default function ShadowFormPage() {
       </div>
 
       {/* Main */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
 
-        {/* SVG hexagon */}
-        <div className="flex-1 flex items-center justify-center p-4 min-w-0">
+        {/* SVG hexagon — takes 55% of height on mobile, full flex-1 column on desktop */}
+        <div className="flex items-center justify-center p-2 md:p-4 min-w-0 min-h-0 h-[55%] md:h-auto md:flex-1 shrink-0">
           <svg
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-            style={{ maxWidth: "min(480px, 100%)", width: "100%", height: "auto" }}
+            style={{ width: "100%", height: "auto", maxWidth: "480px", maxHeight: "100%", display: "block" }}
           >
             <defs>
               <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
@@ -374,8 +374,8 @@ export default function ShadowFormPage() {
           </svg>
         </div>
 
-        {/* Detail panel */}
-        <div className="w-80 border-l border-gray-800 bg-[#05050f] flex flex-col shrink-0 overflow-y-auto">
+        {/* Detail panel — scrollable flex-1 below SVG on mobile, fixed 320px sidebar on desktop */}
+        <div className="flex-1 overflow-y-auto md:flex-none md:w-80 md:shrink-0 border-t md:border-t-0 md:border-l border-gray-800 bg-[#05050f] flex flex-col">
           {focusForm ? (
             <div className="flex-1 flex flex-col p-5 gap-4">
               {/* Form header */}
