@@ -102,13 +102,7 @@ When the link is clicked:
 - The account is marked verified, the badge disappears
 - The player is redirected to the login page with a green `✓ Account verified!` banner
 
-**Unverified accounts** that are not verified within **5 days** are automatically deleted by the cleanup endpoint.
-
-Cleanup endpoint (call from a daily cron job):
-```
-DELETE /api/auth/cleanup-unverified
-Header: x-cleanup-secret: <CLEANUP_SECRET>
-```
+Unverified accounts are **kept indefinitely** — they can still log in and play with the UNVERIFIED badge visible.
 
 Google OAuth accounts are always considered verified (email comes from Google).
 

@@ -1,9 +1,5 @@
 import { NextRequest } from "next/server";
-import { connectDB } from "@/lib/db";
-import { ok, err } from "@/lib/response";
-import User from "@/models/User";
-
-const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+import { err, ok } from "@/lib/response";
 
 export async function DELETE(req: NextRequest) {
   const secret = req.headers.get("x-cleanup-secret");
@@ -11,14 +7,6 @@ export async function DELETE(req: NextRequest) {
     return err("Unauthorized", 401);
   }
 
-  await connectDB();
-
-  const cutoff = new Date(Date.now() - FIVE_DAYS_MS);
-  const result = await User.deleteMany({
-    isVerified: false,
-    googleId: { $exists: false },
-    createdAt: { $lt: cutoff },
-  });
-
-  return ok({ deleted: result.deletedCount });
+  // Auto-deletion of unverified accounts is disabled — unverified accounts are kept indefinitely
+  return ok({ deleted: 0 });
 }
