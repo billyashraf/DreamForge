@@ -26,7 +26,7 @@ interface Link {
 function networkTarget(order: number, cx: number, cy: number) {
   if (order === 0) return { x: cx, y: cy };
   const a = order * 2.399963229;
-  const r = (75 + 65 * Math.sqrt(order)) / 5; // 5× tighter
+  const r = (75 + 65 * Math.sqrt(order)) / 5;
   return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
 }
 
@@ -43,12 +43,37 @@ function initParticles(W: number, H: number): Particle[] {
   }));
 }
 
-function levelColor(level: number) {
-  return ["#00e5ff","#00ff88","#ffaa00","#ff6600","#ff2255"][Math.min(level - 1, 4)];
+// 8 color grades across MAX_CURSE_LEVEL (55)
+function levelColor(level: number): string {
+  if (level <= 7)  return "#00e5ff";
+  if (level <= 14) return "#00ffcc";
+  if (level <= 21) return "#00ff88";
+  if (level <= 28) return "#aaff00";
+  if (level <= 35) return "#ffee00";
+  if (level <= 42) return "#ffaa00";
+  if (level <= 49) return "#ff6600";
+  return "#ff2255";
 }
 
-function linkColor(weight: number) {
-  return `rgba(255,200,55,${Math.min(0.25 + weight * 0.12, 0.9)})`;
+// Link color shifts with weight (6 tiers)
+function linkColor(weight: number): string {
+  if (weight <= 1) return "rgba(255,200,55,0.50)";
+  if (weight <= 2) return "rgba(255,160,40,0.62)";
+  if (weight <= 3) return "rgba(255,110,20,0.72)";
+  if (weight <= 4) return "rgba(255,60,40,0.78)";
+  if (weight <= 5) return "rgba(220,30,100,0.84)";
+  return              "rgba(180,0,220,0.88)";
+}
+
+function linkSelColor(weight: number): string {
+  if (weight >= 5) return "#dd44ff";
+  if (weight >= 3) return "#ff8855";
+  return "#ffe566";
+}
+
+// Particle radius scales meaningfully with level: level 1 → 5px, level 55 → 32px
+function particleRadius(level: number): number {
+  return 5 + Math.max(0, level - 1) * 0.5;
 }
 
 function distToSeg(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
@@ -70,10 +95,8 @@ export default function CurseTreePage() {
   const frameRef     = useRef<number>(0);
   const dimRef       = useRef({ W: 800, H: 500 });
   const linkCtr      = useRef(0);
-  // Canvas transform: offset in CSS px, scale unitless
   const xfRef        = useRef({ scale: 1, ox: 0, oy: 0 });
 
-  // Selection refs — kept in sync with state every render
   const selParticleRef  = useRef<number | null>(null);
   const selLinkRef      = useRef<number | null>(null);
   const linkingFromRef  = useRef<number | null>(null);
@@ -89,7 +112,6 @@ export default function CurseTreePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [statusMsg,     setStatusMsg]     = useState<string | null>(null);
 
-  // Sync refs each render
   selParticleRef.current = selParticleId;
   selLinkRef.current     = selLinkId;
   linkingFromRef.current = linkingFromId;
@@ -100,7 +122,6 @@ export default function CurseTreePage() {
     setTimeout(() => setStatusMsg(null), 2500);
   }, []);
 
-  // stable: reads only from refs + stable setters
   const createLink = useCallback((fromId: number, toId: number) => {
     const fromP = particlesRef.current.find(p => p.id === fromId);
     const toP   = particlesRef.current.find(p => p.id === toId);
@@ -204,17 +225,14 @@ export default function CurseTreePage() {
     function draw() {
       const { scale, ox, oy } = xfRef.current;
 
-      // Clear in screen space
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
-
-      // All drawing in world space
       ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
 
       // Grid
       ctx.save();
       ctx.strokeStyle = "rgba(28,28,55,0.5)";
-      ctx.lineWidth = 0.5 / scale; // keep grid lines thin regardless of zoom
+      ctx.lineWidth = 0.5 / scale;
       for (let x = 0; x <= W; x += GRID) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 0; y <= H; y += GRID) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
       ctx.restore();
@@ -231,25 +249,31 @@ export default function CurseTreePage() {
         const to   = particles.find(p => p.id === link.toId);
         if (!from || !to) continue;
 
+        const fromR = particleRadius(from.activated ? from.level : 1);
+        const toR   = particleRadius(to.activated   ? to.level   : 1);
+        // Cap line thickness at the smaller connected particle's radius
+        const capW  = Math.min(fromR, toR);
+        const baseW = Math.max(0.8, link.weight * 0.7);
+
         const isSel = selL === link.id;
+        const selC  = linkSelColor(link.weight);
         ctx.save();
-        ctx.strokeStyle = isSel ? "#ffe566" : linkColor(link.weight);
-        ctx.lineWidth   = Math.max(0.5, isSel ? link.weight + 2 : link.weight);
-        ctx.shadowBlur  = isSel ? 18 : 6;
-        ctx.shadowColor = isSel ? "#ffe566" : linkColor(link.weight);
-        ctx.globalAlpha = isSel ? 1 : 0.8;
+        ctx.strokeStyle = isSel ? selC : linkColor(link.weight);
+        ctx.lineWidth   = Math.min(isSel ? baseW + 1.5 : baseW, capW);
+        ctx.shadowBlur  = isSel ? 20 : 5 + link.weight;
+        ctx.shadowColor = isSel ? selC : linkColor(link.weight);
+        ctx.globalAlpha = isSel ? 1 : 0.85;
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x,   to.y);
         ctx.stroke();
 
-        // Weight label at midpoint
         if (link.weight > 1 || isSel) {
           const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
           ctx.shadowBlur = 0;
           ctx.font = `${8 / scale}px monospace`;
           ctx.textAlign = "center";
-          ctx.fillStyle = isSel ? "#ffe566" : "rgba(255,200,55,0.9)";
+          ctx.fillStyle = isSel ? selC : "rgba(255,200,55,0.9)";
           ctx.globalAlpha = 1;
           ctx.fillText(`W${link.weight}`, mx, my - 6 / scale);
         }
@@ -258,7 +282,6 @@ export default function CurseTreePage() {
 
       // ── Particles ──
       for (const p of particles) {
-        // Movement
         if (p.activated) {
           const dx = p.targetX - p.x, dy = p.targetY - p.y;
           if (Math.hypot(dx, dy) > 0.5) { p.x += dx * 0.05; p.y += dy * 0.05; }
@@ -277,13 +300,13 @@ export default function CurseTreePage() {
 
         const isSel     = selP === p.id;
         const isLinking = linkingFrom === p.id;
-        const r = p.activated ? 5 + (p.level - 1) * 0.18 : isSel ? 5 : 3; // level 55 → ~14.7px
+        const r = p.activated ? particleRadius(p.level) : isSel ? 5 : 3;
 
         const statGlow = p.activated ? STAT_GLOW[SKILL_STATS[p.id]] : null;
 
         ctx.save();
         if (p.activated || isSel || isLinking) {
-          ctx.shadowBlur  = isLinking ? 26 : isSel ? 20 : 10 + (p.level - 1) * 0.22; // level 55 → ~22px
+          ctx.shadowBlur  = isLinking ? 28 : isSel ? 22 : 10 + (p.level - 1) * 0.3;
           ctx.shadowColor = isLinking ? "#ffaa00" : p.activated ? (statGlow ?? levelColor(p.level)) : isSel ? "#00ffff" : levelColor(p.level);
         }
         if (isLinking) {
@@ -297,13 +320,12 @@ export default function CurseTreePage() {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        const fs = Math.max(6, Math.min(11, (p.activated ? 9 : isSel ? 8 : 7)));
+        const fs = Math.max(6, Math.min(11, p.activated ? 9 : isSel ? 8 : 7));
         ctx.font = `${fs}px monospace`;
         ctx.textAlign = "center";
         ctx.fillStyle = p.activated ? "#fff" : isSel ? "#00ffff" : "rgba(120,120,155,0.4)";
         ctx.fillText(p.name, p.x, p.y + r + 10);
 
-        // Stat abbreviation under name for activated particles
         if (p.activated) {
           ctx.font = "6px monospace";
           ctx.fillStyle = statGlow ?? "#aaa";
@@ -312,7 +334,7 @@ export default function CurseTreePage() {
 
         if (p.activated && p.level > 1) {
           ctx.font = "7px monospace";
-          ctx.fillStyle = "#ffaa00";
+          ctx.fillStyle = levelColor(p.level);
           ctx.fillText(`L${p.level}`, p.x, p.y - r - 2);
         }
         ctx.restore();
@@ -325,19 +347,25 @@ export default function CurseTreePage() {
     return () => cancelAnimationFrame(frameRef.current);
   }, []);
 
-  // ── Mouse / wheel / drag / pan ────────────────────────────────────────────
+  // ── Mouse / wheel / touch / drag / pan ────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     type DragState = { id: number; startMX: number; startMY: number; startPX: number; startPY: number; moved: boolean };
     type PanState  = { startMX: number; startMY: number; startOx: number; startOy: number };
+    type PinchState = { d0: number; scale0: number; ox0: number; oy0: number; cx0: number; cy0: number };
     let drag: DragState | null = null;
     let panning: PanState | null = null;
+    let pinch: PinchState | null = null;
 
     function screenPt(e: MouseEvent) {
       const r = canvas!.getBoundingClientRect();
       return { sx: e.clientX - r.left, sy: e.clientY - r.top };
+    }
+    function touchPt(t: Touch) {
+      const r = canvas!.getBoundingClientRect();
+      return { sx: t.clientX - r.left, sy: t.clientY - r.top };
     }
     function toWorld(sx: number, sy: number) {
       const { scale, ox, oy } = xfRef.current;
@@ -361,8 +389,8 @@ export default function CurseTreePage() {
       return null;
     }
 
-    function handleClick(wx: number, wy: number) {
-      const particle    = nearParticle(wx, wy);
+    function handleClick(wx: number, wy: number, touchHitR = 18) {
+      const particle    = nearParticle(wx, wy, touchHitR);
       const lf          = linkingFromRef.current;
       const curSel      = selParticleRef.current;
 
@@ -382,7 +410,7 @@ export default function CurseTreePage() {
           linkingFromRef.current = null;        setLinkingFromId(null);
         }
       } else {
-        const link = nearLink(wx, wy);
+        const link = nearLink(wx, wy, touchHitR);
         if (link) {
           selLinkRef.current     = link.id; setSelLinkId(link.id);
           selParticleRef.current = null;    setSelParticleId(null);
@@ -395,6 +423,7 @@ export default function CurseTreePage() {
       }
     }
 
+    // ── Mouse ──
     const onMouseDown = (e: MouseEvent) => {
       const { sx, sy } = screenPt(e);
       const { wx, wy } = toWorld(sx, sy);
@@ -431,12 +460,12 @@ export default function CurseTreePage() {
     const onMouseUp = (e: MouseEvent) => {
       const { sx, sy } = screenPt(e);
       const wasDrag = drag?.moved ?? false;
-      const wasPan  = panning !== null && Math.hypot(sx - (panning.startMX), sy - (panning.startMY)) > 4;
+      const wasPan  = panning !== null && Math.hypot(sx - panning.startMX, sy - panning.startMY) > 4;
       drag = null; panning = null;
       canvas!.style.cursor = "crosshair";
       if (!wasDrag && !wasPan) {
         const { wx, wy } = toWorld(sx, sy);
-        handleClick(wx, wy);
+        handleClick(wx, wy, 18);
       }
     };
 
@@ -453,15 +482,99 @@ export default function CurseTreePage() {
       };
     };
 
+    // ── Touch ──
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        drag = null; panning = null;
+        const t0 = touchPt(e.touches[0]);
+        const t1 = touchPt(e.touches[1]);
+        const d0 = Math.hypot(t0.sx - t1.sx, t0.sy - t1.sy);
+        const cx = (t0.sx + t1.sx) / 2;
+        const cy = (t0.sy + t1.sy) / 2;
+        const { scale, ox, oy } = xfRef.current;
+        pinch = { d0, scale0: scale, ox0: ox, oy0: oy, cx0: cx, cy0: cy };
+      } else if (e.touches.length === 1) {
+        pinch = null;
+        const { sx, sy } = touchPt(e.touches[0]);
+        const { wx, wy } = toWorld(sx, sy);
+        const p = nearParticle(wx, wy, 28);
+        if (p?.activated) {
+          drag = { id: p.id, startMX: sx, startMY: sy, startPX: p.x, startPY: p.y, moved: false };
+        } else {
+          const { ox, oy } = xfRef.current;
+          panning = { startMX: sx, startMY: sy, startOx: ox, startOy: oy };
+        }
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2 && pinch) {
+        const t0 = touchPt(e.touches[0]);
+        const t1 = touchPt(e.touches[1]);
+        const d  = Math.hypot(t0.sx - t1.sx, t0.sy - t1.sy);
+        const cx = (t0.sx + t1.sx) / 2;
+        const cy = (t0.sy + t1.sy) / 2;
+        const newScale = Math.max(0.08, Math.min(12, pinch.scale0 * (d / pinch.d0)));
+        // Zoom around pinch midpoint while tracking pan
+        xfRef.current = {
+          scale: newScale,
+          ox: cx - newScale * (pinch.cx0 - pinch.ox0) / pinch.scale0,
+          oy: cy - newScale * (pinch.cy0 - pinch.oy0) / pinch.scale0,
+        };
+      } else if (e.touches.length === 1) {
+        const { sx, sy } = touchPt(e.touches[0]);
+        const { scale } = xfRef.current;
+        if (drag) {
+          const dxS = sx - drag.startMX, dyS = sy - drag.startMY;
+          if (Math.hypot(dxS, dyS) > 6) {
+            drag.moved = true;
+            const p = particlesRef.current.find(q => q.id === drag!.id);
+            if (p) {
+              p.x = drag.startPX + dxS / scale;
+              p.y = drag.startPY + dyS / scale;
+              p.targetX = p.x; p.targetY = p.y;
+            }
+          }
+        } else if (panning) {
+          xfRef.current.ox = panning.startOx + (sx - panning.startMX);
+          xfRef.current.oy = panning.startOy + (sy - panning.startMY);
+        }
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length < 2) pinch = null;
+      if (e.touches.length === 0) {
+        const wasDrag = drag?.moved ?? false;
+        const changedT = e.changedTouches[0];
+        const { sx, sy } = touchPt(changedT);
+        const wasPan = panning !== null && Math.hypot(sx - panning.startMX, sy - panning.startMY) > 8;
+        drag = null; panning = null;
+        if (!wasDrag && !wasPan) {
+          const { wx, wy } = toWorld(sx, sy);
+          handleClick(wx, wy, 28);
+        }
+      }
+    };
+
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("mouseup",   onMouseUp);
     canvas.addEventListener("wheel",     onWheel, { passive: false });
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
     return () => {
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseup",   onMouseUp);
       canvas.removeEventListener("wheel",     onWheel);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove",  onTouchMove);
+      canvas.removeEventListener("touchend",   onTouchEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createLink]);
@@ -479,7 +592,7 @@ export default function CurseTreePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // ── Zoom buttons (stable: only writes to xfRef, no state needed) ──────────
+  // ── Zoom buttons ──────────────────────────────────────────────────────────
   const zoomBy = useCallback((factor: number) => {
     const { scale, ox, oy } = xfRef.current;
     const { W, H } = dimRef.current;
@@ -512,7 +625,6 @@ export default function CurseTreePage() {
     } finally { setActionLoading(false); }
   }, [selParticleId, merits, actionLoading, flash]);
 
-  // ── Skill upgrade (uses activatedMap — not p.activated — to avoid stale ref) ──
   const upgradeSelected = useCallback(async () => {
     if (selParticleId === null || actionLoading) return;
     if (!activatedMap.has(selParticleId)) return;
@@ -535,7 +647,6 @@ export default function CurseTreePage() {
     } finally { setActionLoading(false); }
   }, [selParticleId, activatedMap, merits, actionLoading, flash]);
 
-  // ── Link upgrade weight ───────────────────────────────────────────────────
   const upgradeLink = useCallback(async () => {
     if (selLinkId === null || actionLoading) return;
     const link  = linksRef.current.find(l => l.id === selLinkId);
@@ -557,7 +668,6 @@ export default function CurseTreePage() {
     } finally { setActionLoading(false); }
   }, [selLinkId, merits, actionLoading, flash]);
 
-  // ── Link remove ───────────────────────────────────────────────────────────
   const removeLink = useCallback(async () => {
     if (selLinkId === null || actionLoading) return;
     const link  = linksRef.current.find(l => l.id === selLinkId);
@@ -577,7 +687,7 @@ export default function CurseTreePage() {
     } finally { setActionLoading(false); }
   }, [selLinkId, actionLoading, flash]);
 
-  // ── Derived UI values (from React state — always accurate) ────────────────
+  // ── Derived UI values ─────────────────────────────────────────────────────
   const selParticle  = selParticleId !== null ? particlesRef.current.find(p => p.id === selParticleId) ?? null : null;
   const isActivated  = selParticleId !== null && activatedMap.has(selParticleId);
   const selLevel     = activatedMap.get(selParticleId ?? -1) ?? 1;
@@ -601,7 +711,7 @@ export default function CurseTreePage() {
         <div className="flex items-center gap-3 flex-wrap">
           {linkingFromId !== null && (
             <span className="text-xs font-mono text-yellow-400 animate-pulse">
-              ⟶ Click activated skill to link from <strong>{linkingFromP?.name}</strong> · ESC cancel
+              ⟶ Tap activated skill to link from <strong>{linkingFromP?.name}</strong>
             </span>
           )}
           {statusMsg && linkingFromId === null && (
@@ -615,7 +725,7 @@ export default function CurseTreePage() {
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="relative flex-1 overflow-hidden" style={{ cursor: "crosshair" }}>
+      <div ref={containerRef} className="relative flex-1 overflow-hidden" style={{ cursor: "crosshair", touchAction: "none" }}>
         <canvas ref={canvasRef} className="block" />
 
         {!pageReady && (
@@ -632,29 +742,29 @@ export default function CurseTreePage() {
             { label: "↺", title: "Reset",    fn: zoomReset           },
           ].map(({ label, title, fn }) => (
             <button key={label} onClick={fn} title={title}
-              className="w-7 h-7 border border-gray-700 bg-[#05050f]/90 text-gray-400 hover:text-gray-100 hover:border-gray-500 font-mono text-sm transition-colors flex items-center justify-center">
+              className="w-8 h-8 border border-gray-700 bg-[#05050f]/90 text-gray-400 hover:text-gray-100 hover:border-gray-500 font-mono text-sm transition-colors flex items-center justify-center">
               {label}
             </button>
           ))}
           <div className="text-[9px] font-mono text-gray-700 mt-0.5 text-center leading-tight">
-            scroll<br/>to zoom
+            pinch/<br/>scroll
           </div>
         </div>
 
-        {/* Skill panel */}
+        {/* Skill panel — responsive */}
         {selParticle && !selLink && (() => {
           const skillStat  = SKILL_STATS[selParticle.id];
           const statLabel  = STAT_LABEL[skillStat];
           const statColor  = STAT_GLOW[skillStat];
           const atMax      = selLevel >= MAX_CURSE_LEVEL;
           return (
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 border border-gray-700 bg-[#05050f]/95 backdrop-blur px-5 py-3 flex items-center gap-4 font-mono text-xs pointer-events-auto shadow-2xl">
-            <div className="min-w-[130px]">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+            <div className="min-w-0 sm:min-w-[130px]">
               <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Skill</div>
               <div className="text-base font-bold mt-0.5" style={{ color: isActivated ? levelColor(selLevel) : "#00e5ff" }}>
                 {selParticle.name}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: statColor, border: `1px solid ${statColor}55`, background: `${statColor}11` }}>
                   {statLabel}
                 </span>
@@ -665,89 +775,93 @@ export default function CurseTreePage() {
                 )}
               </div>
             </div>
-            <div className="w-px h-10 bg-gray-800" />
+            <div className="hidden sm:block w-px h-10 bg-gray-800 shrink-0" />
 
-            {!isActivated ? (
-              <div className="flex flex-col items-center gap-1">
-                <button onClick={activateSelected} disabled={actionLoading || merits < ACTIVATE_COST}
-                  className="px-4 py-1.5 border border-cyan-800 text-cyan-400 hover:bg-cyan-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                  {actionLoading ? "..." : "ACTIVATE"}
-                </button>
-                <span className="text-[10px] text-gray-600">{ACTIVATE_COST} merits · +1 {statLabel}</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col items-center gap-1">
-                  {atMax ? (
-                    <span className="px-4 py-1.5 border border-gray-700 text-gray-600 tracking-wider">MAX LEVEL</span>
-                  ) : (
-                    <button onClick={upgradeSelected} disabled={actionLoading || merits < upgradeCost(selLevel)}
-                      className="px-4 py-1.5 border border-purple-800 text-purple-400 hover:bg-purple-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                      {actionLoading ? "..." : `L${selLevel}→${selLevel + 1} +1${statLabel}`}
-                    </button>
-                  )}
-                  {!atMax && <span className="text-[10px] text-gray-600">{upgradeCost(selLevel).toLocaleString()} merits</span>}
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <button onClick={() => { linkingFromRef.current = selParticleId; setLinkingFromId(selParticleId); }}
-                    disabled={actionLoading || linkingFromId !== null}
-                    className="px-4 py-1.5 border border-yellow-900 text-yellow-500 hover:bg-yellow-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                    LINK TO...
+            <div className="flex flex-row flex-wrap gap-3 items-start sm:items-center">
+              {!isActivated ? (
+                <div className="flex flex-col items-start gap-1">
+                  <button onClick={activateSelected} disabled={actionLoading || merits < ACTIVATE_COST}
+                    className="px-4 py-2 border border-cyan-800 text-cyan-400 hover:bg-cyan-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                    {actionLoading ? "..." : "ACTIVATE"}
                   </button>
-                  <span className="text-[10px] text-gray-600">free</span>
+                  <span className="text-[10px] text-gray-600">{ACTIVATE_COST} merits · +1 {statLabel}</span>
                 </div>
-              </>
-            )}
-            <button onClick={() => { selParticleRef.current = null; setSelParticleId(null); linkingFromRef.current = null; setLinkingFromId(null); }}
-              className="text-gray-600 hover:text-gray-400 px-1 text-base">✕</button>
+              ) : (
+                <>
+                  <div className="flex flex-col items-start gap-1">
+                    {atMax ? (
+                      <span className="px-4 py-2 border border-gray-700 text-gray-600 tracking-wider">MAX LEVEL</span>
+                    ) : (
+                      <button onClick={upgradeSelected} disabled={actionLoading || merits < upgradeCost(selLevel)}
+                        className="px-4 py-2 border border-purple-800 text-purple-400 hover:bg-purple-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                        {actionLoading ? "..." : `L${selLevel}→${selLevel + 1} +1${statLabel}`}
+                      </button>
+                    )}
+                    {!atMax && <span className="text-[10px] text-gray-600">{upgradeCost(selLevel).toLocaleString()} merits</span>}
+                  </div>
+                  <div className="flex flex-col items-start gap-1">
+                    <button onClick={() => { linkingFromRef.current = selParticleId; setLinkingFromId(selParticleId); }}
+                      disabled={actionLoading || linkingFromId !== null}
+                      className="px-4 py-2 border border-yellow-900 text-yellow-500 hover:bg-yellow-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                      LINK TO...
+                    </button>
+                    <span className="text-[10px] text-gray-600">free</span>
+                  </div>
+                </>
+              )}
+              <button onClick={() => { selParticleRef.current = null; setSelParticleId(null); linkingFromRef.current = null; setLinkingFromId(null); }}
+                className="text-gray-600 hover:text-gray-400 px-1 text-base self-start">✕</button>
+            </div>
           </div>
           );
         })()}
 
-        {/* Link panel */}
+        {/* Link panel — responsive */}
         {selLink && !selParticle && (
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 border border-yellow-900/50 bg-[#05050f]/95 backdrop-blur px-5 py-3 flex items-center gap-4 font-mono text-xs pointer-events-auto shadow-2xl">
-            <div className="min-w-[160px]">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-yellow-900/50 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+            <div className="min-w-0 sm:min-w-[160px]">
               <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Link</div>
-              <div className="text-yellow-400 font-bold mt-0.5">
+              <div className="font-bold mt-0.5" style={{ color: linkSelColor(selLink.weight) }}>
                 {linkFromP?.name} ↔ {linkToP?.name}
               </div>
               <div className="text-gray-600">Weight {selLink.weight} · next: {linkUpgradeCost(selLink.weight).toLocaleString()}M</div>
             </div>
-            <div className="w-px h-10 bg-gray-800" />
-            <div className="flex flex-col items-center gap-1">
-              <button onClick={upgradeLink} disabled={actionLoading || merits < linkUpgradeCost(selLink.weight)}
-                className="px-4 py-1.5 border border-yellow-800 text-yellow-400 hover:bg-yellow-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                {actionLoading ? "..." : `BOOST W${selLink.weight}→W${selLink.weight + 1}`}
-              </button>
-              <span className="text-[10px] text-gray-600">{linkUpgradeCost(selLink.weight).toLocaleString()} merits</span>
+            <div className="hidden sm:block w-px h-10 bg-gray-800 shrink-0" />
+            <div className="flex flex-row flex-wrap gap-3 items-start">
+              <div className="flex flex-col items-start gap-1">
+                <button onClick={upgradeLink} disabled={actionLoading || merits < linkUpgradeCost(selLink.weight)}
+                  className="px-4 py-2 border border-yellow-800 text-yellow-400 hover:bg-yellow-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                  {actionLoading ? "..." : `BOOST W${selLink.weight}→W${selLink.weight + 1}`}
+                </button>
+                <span className="text-[10px] text-gray-600">{linkUpgradeCost(selLink.weight).toLocaleString()} merits</span>
+              </div>
+              <div className="flex flex-col items-start gap-1">
+                <button onClick={removeLink} disabled={actionLoading}
+                  className="px-4 py-2 border border-red-900/60 text-red-500 hover:bg-red-950/40 disabled:opacity-30 transition-colors tracking-wider">
+                  {actionLoading ? "..." : "REMOVE"}
+                </button>
+                <span className="text-[10px] text-gray-600">free</span>
+              </div>
+              <button onClick={() => { selLinkRef.current = null; setSelLinkId(null); }}
+                className="text-gray-600 hover:text-gray-400 px-1 text-base self-start">✕</button>
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <button onClick={removeLink} disabled={actionLoading}
-                className="px-4 py-1.5 border border-red-900/60 text-red-500 hover:bg-red-950/40 disabled:opacity-30 transition-colors tracking-wider">
-                {actionLoading ? "..." : "REMOVE"}
-              </button>
-              <span className="text-[10px] text-gray-600">free</span>
-            </div>
-            <button onClick={() => { selLinkRef.current = null; setSelLinkId(null); }}
-              className="text-gray-600 hover:text-gray-400 px-1 text-base">✕</button>
           </div>
         )}
 
         {/* Legend */}
-        <div className="absolute top-3 right-3 border border-gray-800 bg-[#05050f]/80 px-3 py-2 text-[10px] font-mono space-y-1 pointer-events-none">
+        <div className="absolute top-3 right-3 border border-gray-800 bg-[#05050f]/80 px-2 sm:px-3 py-2 text-[10px] font-mono space-y-1 pointer-events-none">
           <div className="text-gray-500 uppercase tracking-widest mb-1">Levels</div>
-          {[1,2,3,4,5].map(l => (
-            <div key={l} className="flex items-center gap-2 text-gray-600">
-              <span className="w-2 h-2 rounded-full inline-block" style={{ background: levelColor(l), boxShadow: `0 0 4px ${levelColor(l)}` }} />
-              L{l}
+          {[1,2,3,4,5,6,7,8].map(l => (
+            <div key={l} className="flex items-center gap-1.5 text-gray-600">
+              <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: levelColor(l * 7), boxShadow: `0 0 4px ${levelColor(l * 7)}` }} />
+              <span>L{(l - 1) * 7 + 1}–{l * 7}</span>
             </div>
           ))}
-          <div className="text-gray-700 mt-2 pt-2 border-t border-gray-800 space-y-0.5">
-            <div>Scroll / buttons = zoom</div>
+          <div className="hidden sm:block text-gray-700 mt-2 pt-2 border-t border-gray-800 space-y-0.5">
+            <div>Scroll/pinch = zoom</div>
             <div>Drag canvas = pan</div>
             <div>Drag skill = move</div>
-            <div>Click line = edit link</div>
+            <div>Tap line = edit link</div>
           </div>
         </div>
       </div>

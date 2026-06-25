@@ -134,11 +134,17 @@ export function computeAcademyLayout(): Map<string, { x: number; y: number }> {
   return positions;
 }
 
+// 10 color grades across MAX_ACADEMY_LEVEL (500)
 export function academyLevelColor(level: number): string {
-  if (level <= 100) return "#00e5ff";
+  if (level <= 50)  return "#00e5ff";
+  if (level <= 100) return "#00ccee";
+  if (level <= 150) return "#00ffcc";
   if (level <= 200) return "#00ff88";
-  if (level <= 300) return "#ffaa00";
-  if (level <= 400) return "#ff6600";
+  if (level <= 250) return "#55ff44";
+  if (level <= 300) return "#aaff00";
+  if (level <= 350) return "#ffee00";
+  if (level <= 400) return "#ffaa00";
+  if (level <= 450) return "#ff5500";
   return "#ffd700";
 }
 

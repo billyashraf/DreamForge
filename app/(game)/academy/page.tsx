@@ -16,15 +16,10 @@ import {
   type AcademyField,
 } from "@/lib/academyFields";
 
-// Pre-compute layout and children map (pure, deterministic)
 const LAYOUT       = computeAcademyLayout();
 const CHILDREN_MAP = buildAcademyChildrenMap();
 
-function nearestField(
-  wx: number,
-  wy: number,
-  threshold = 22
-): AcademyField | null {
+function nearestField(wx: number, wy: number, threshold = 22): AcademyField | null {
   let best: AcademyField | null = null;
   let minD = threshold;
   for (const f of ACADEMY_FIELDS) {
@@ -36,9 +31,10 @@ function nearestField(
   return best;
 }
 
+// Node radius scales more aggressively with level: level 0 → 5px, level 500 → ~32px
 function nodeRadius(level: number, isSelected: boolean): number {
   if (level <= 0) return isSelected ? 7 : 5;
-  return 7 + Math.min(level - 1, 499) * 0.03; // ~22px at level 500
+  return 7 + Math.min(level, 500) * 0.05;
 }
 
 export default function AcademyPage() {
@@ -49,11 +45,10 @@ export default function AcademyPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const frameRef     = useRef<number>(0);
   const dimRef       = useRef({ W: 800, H: 500 });
-  // Transform: ox/oy are offsets in CSS px, scale is unitless
   const xfRef        = useRef({ scale: 1, ox: 0, oy: 0 });
 
   const selectedRef = useRef<string | null>(null);
-  const unlockedRef = useRef<Map<string, number>>(new Map()); // fieldId → level
+  const unlockedRef = useRef<Map<string, number>>(new Map());
 
   const [unlockedMap,  setUnlockedMap]  = useState<Map<string, number>>(new Map());
   const [selectedId,   setSelectedId]   = useState<string | null>(null);
@@ -112,12 +107,10 @@ export default function AcademyPage() {
     canvas.style.height = `${H}px`;
     const ctx = canvas.getContext("2d")!;
 
-    // Fit the full tree width into the canvas on initial load
     const allX = [...LAYOUT.values()].map(p => p.x);
     const treeW = Math.max(...allX) - Math.min(...allX) + 120;
     const initScale = Math.min(1, (W - 40) / treeW);
     const minX = Math.min(...allX);
-    // Center tree horizontally and start near top
     xfRef.current = {
       scale: initScale,
       ox: (W - treeW * initScale) / 2 - minX * initScale + 60 * initScale,
@@ -143,7 +136,7 @@ export default function AcademyPage() {
       const unlocked = unlockedRef.current;
       const selId    = selectedRef.current;
 
-      // ── Edges (parent → children) ─────────────────────────────────────────
+      // ── Edges ─────────────────────────────────────────────────────────────
       for (const field of ACADEMY_FIELDS) {
         if (!field.parent) continue;
         const from = LAYOUT.get(field.parent);
@@ -152,17 +145,28 @@ export default function AcademyPage() {
 
         const parentUnlocked = unlocked.has(field.parent);
         const childUnlocked  = unlocked.has(field.id);
-        const active = parentUnlocked && childUnlocked;
+        const active    = parentUnlocked && childUnlocked;
         const reachable = parentUnlocked && !childUnlocked;
 
+        const childLevel = unlocked.get(field.id) ?? 0;
+
         ctx.save();
-        ctx.strokeStyle = active  ? "rgba(80,160,255,0.55)"
-                        : reachable ? "rgba(60,80,120,0.5)"
-                        : "rgba(25,25,45,0.5)";
-        ctx.lineWidth   = active ? 1.5 / scale : 1 / scale;
-        if (active) { ctx.shadowBlur = 8; ctx.shadowColor = "#33bbff44"; }
+        // Line width stays constant in screen pixels (divided by scale = less scalable)
+        ctx.lineWidth = active ? 2 / scale : 1 / scale;
+
+        if (active) {
+          // Edge color reflects the child node's level color
+          const ec = academyLevelColor(Math.max(childLevel, 1));
+          ctx.strokeStyle = ec + "99";
+          ctx.shadowBlur  = 10 / scale;
+          ctx.shadowColor = ec + "55";
+        } else if (reachable) {
+          ctx.strokeStyle = "rgba(60,80,120,0.5)";
+        } else {
+          ctx.strokeStyle = "rgba(25,25,45,0.5)";
+        }
+
         ctx.beginPath();
-        // Draw a bezier curve
         const mx = (from.x + to.x) / 2;
         const my = (from.y + to.y) / 2;
         ctx.moveTo(from.x, from.y);
@@ -201,10 +205,9 @@ export default function AcademyPage() {
 
         ctx.save();
         if (isUnlocked || isSel) {
-          ctx.shadowBlur  = isSel ? 24 : 8 + Math.min(level, 499) * 0.02;
+          ctx.shadowBlur  = isSel ? 24 : 8 + Math.min(level, 499) * 0.03;
           ctx.shadowColor = glowColor;
         }
-        // Selection ring
         if (isSel) {
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
@@ -218,12 +221,10 @@ export default function AcademyPage() {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Label
         const fontSize = Math.max(6, Math.min(10, 8));
         ctx.font       = `${fontSize}px monospace`;
         ctx.textAlign  = "center";
         ctx.fillStyle  = isUnlocked ? "#fff" : isSel ? "#00e5ff" : parentOk ? "rgba(100,130,180,0.9)" : "rgba(50,50,70,0.7)";
-        // Wrap label at ~12 chars
         const words = field.label.split(" ");
         let line = "";
         let lineY = pos.y + r + 12;
@@ -236,14 +237,12 @@ export default function AcademyPage() {
         }
         if (line) ctx.fillText(line, pos.x, lineY);
 
-        // Level badge
         if (isUnlocked && level > 0) {
           ctx.font      = `${Math.max(5, 7)}px monospace`;
           ctx.fillStyle = isRoot ? "#ffd700" : academyLevelColor(level);
           ctx.fillText(`L${level}`, pos.x, pos.y - r - 4);
         }
 
-        // Stat label for unlocked
         if (isUnlocked) {
           ctx.font      = "5px monospace";
           ctx.fillStyle = ACADEMY_STAT_GLOW[field.stat];
@@ -260,24 +259,43 @@ export default function AcademyPage() {
     return () => cancelAnimationFrame(frameRef.current);
   }, []);
 
-  // ── Mouse / wheel / pan ───────────────────────────────────────────────────
+  // ── Mouse / wheel / touch / pan ───────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    type PanState = { startMX: number; startMY: number; startOx: number; startOy: number };
+    type PanState  = { startMX: number; startMY: number; startOx: number; startOy: number };
+    type PinchState = { d0: number; scale0: number; ox0: number; oy0: number; cx0: number; cy0: number };
     let panning: PanState | null = null;
     let panMoved = false;
+    let pinch: PinchState | null = null;
 
     function screenPt(e: MouseEvent) {
       const rect = canvas!.getBoundingClientRect();
       return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
     }
+    function touchPt(t: Touch) {
+      const rect = canvas!.getBoundingClientRect();
+      return { sx: t.clientX - rect.left, sy: t.clientY - rect.top };
+    }
     function toWorld(sx: number, sy: number) {
       const { scale, ox, oy } = xfRef.current;
       return { wx: (sx - ox) / scale, wy: (sy - oy) / scale };
     }
+    function selectAt(wx: number, wy: number, thr = 22) {
+      const hit = nearestField(wx, wy, thr);
+      if (hit) {
+        const cur = selectedRef.current;
+        const next = cur === hit.id ? null : hit.id;
+        selectedRef.current = next;
+        setSelectedId(next);
+      } else {
+        selectedRef.current = null;
+        setSelectedId(null);
+      }
+    }
 
+    // ── Mouse ──
     const onMouseDown = (e: MouseEvent) => {
       const { sx, sy } = screenPt(e);
       const { ox, oy } = xfRef.current;
@@ -305,16 +323,7 @@ export default function AcademyPage() {
       if (!wasPan) {
         const { sx, sy } = screenPt(e);
         const { wx, wy } = toWorld(sx, sy);
-        const hit = nearestField(wx, wy);
-        if (hit) {
-          const cur = selectedRef.current;
-          const next = cur === hit.id ? null : hit.id;
-          selectedRef.current = next;
-          setSelectedId(next);
-        } else {
-          selectedRef.current = null;
-          setSelectedId(null);
-        }
+        selectAt(wx, wy, 22);
       }
     };
 
@@ -331,15 +340,83 @@ export default function AcademyPage() {
       };
     };
 
+    // ── Touch ──
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        panning = null; panMoved = false;
+        const t0 = touchPt(e.touches[0]);
+        const t1 = touchPt(e.touches[1]);
+        const d0 = Math.hypot(t0.sx - t1.sx, t0.sy - t1.sy);
+        const cx = (t0.sx + t1.sx) / 2;
+        const cy = (t0.sy + t1.sy) / 2;
+        const { scale, ox, oy } = xfRef.current;
+        pinch = { d0, scale0: scale, ox0: ox, oy0: oy, cx0: cx, cy0: cy };
+      } else if (e.touches.length === 1) {
+        pinch = null;
+        const { sx, sy } = touchPt(e.touches[0]);
+        const { ox, oy } = xfRef.current;
+        panning  = { startMX: sx, startMY: sy, startOx: ox, startOy: oy };
+        panMoved = false;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2 && pinch) {
+        const t0 = touchPt(e.touches[0]);
+        const t1 = touchPt(e.touches[1]);
+        const d  = Math.hypot(t0.sx - t1.sx, t0.sy - t1.sy);
+        const cx = (t0.sx + t1.sx) / 2;
+        const cy = (t0.sy + t1.sy) / 2;
+        const newScale = Math.max(0.05, Math.min(15, pinch.scale0 * (d / pinch.d0)));
+        xfRef.current = {
+          scale: newScale,
+          ox: cx - newScale * (pinch.cx0 - pinch.ox0) / pinch.scale0,
+          oy: cy - newScale * (pinch.cy0 - pinch.oy0) / pinch.scale0,
+        };
+      } else if (e.touches.length === 1 && panning) {
+        const { sx, sy } = touchPt(e.touches[0]);
+        const dx = sx - panning.startMX;
+        const dy = sy - panning.startMY;
+        if (Math.hypot(dx, dy) > 6) {
+          panMoved = true;
+          xfRef.current.ox = panning.startOx + dx;
+          xfRef.current.oy = panning.startOy + dy;
+        }
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length < 2) pinch = null;
+      if (e.touches.length === 0) {
+        const wasPan = panMoved;
+        const changedT = e.changedTouches[0];
+        const { sx, sy } = touchPt(changedT);
+        panning = null; panMoved = false;
+        if (!wasPan) {
+          const { wx, wy } = toWorld(sx, sy);
+          selectAt(wx, wy, 30);
+        }
+      }
+    };
+
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("mouseup",   onMouseUp);
     canvas.addEventListener("wheel",     onWheel, { passive: false });
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
     return () => {
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseup",   onMouseUp);
       canvas.removeEventListener("wheel",     onWheel);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove",  onTouchMove);
+      canvas.removeEventListener("touchend",   onTouchEnd);
     };
   }, []);
 
@@ -437,7 +514,7 @@ export default function AcademyPage() {
   const totalUnlocked = unlockedMap.size;
   const shadowForm = character?.shadowForm ?? null;
 
-  // ── Gate: Rider or Assassin form required ──────────────────────────────────
+  // ── Gate: Rider or Assassin form required ─────────────────────────────────
   if (pageReady && shadowForm !== "rider" && shadowForm !== "assassin") {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
@@ -481,7 +558,7 @@ export default function AcademyPage() {
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="relative flex-1 overflow-hidden" style={{ cursor: "default" }}>
+      <div ref={containerRef} className="relative flex-1 overflow-hidden" style={{ cursor: "default", touchAction: "none" }}>
         <canvas ref={canvasRef} className="block" />
 
         {!pageReady && (
@@ -498,22 +575,22 @@ export default function AcademyPage() {
             { label: "↺", title: "Reset",    fn: zoomReset           },
           ].map(({ label, title, fn }) => (
             <button key={label} onClick={fn} title={title}
-              className="w-7 h-7 border border-gray-700 bg-[#05050f]/90 text-gray-400 hover:text-gray-100 hover:border-gray-500 font-mono text-sm transition-colors flex items-center justify-center">
+              className="w-8 h-8 border border-gray-700 bg-[#05050f]/90 text-gray-400 hover:text-gray-100 hover:border-gray-500 font-mono text-sm transition-colors flex items-center justify-center">
               {label}
             </button>
           ))}
           <div className="text-[9px] font-mono text-gray-700 mt-0.5 text-center leading-tight">
-            scroll<br/>zoom
+            pinch/<br/>scroll
           </div>
         </div>
 
-        {/* Selected field panel */}
+        {/* Selected field panel — responsive */}
         {selField && (() => {
           const statColor = ACADEMY_STAT_GLOW[selField.stat];
           const statLabel = ACADEMY_STAT_LABEL[selField.stat];
           return (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 border border-gray-700 bg-[#05050f]/95 backdrop-blur px-5 py-3 flex items-center gap-4 font-mono text-xs pointer-events-auto shadow-2xl min-w-[340px]">
-              <div className="min-w-[150px]">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-16px)] sm:w-auto max-w-lg border border-gray-700 bg-[#05050f]/95 backdrop-blur px-3 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs pointer-events-auto shadow-2xl">
+              <div className="min-w-0 sm:min-w-[150px]">
                 <div className="text-gray-500 text-[10px] uppercase tracking-widest">Selected Field</div>
                 <div className="text-base font-bold mt-0.5"
                   style={{ color: selField.id === "philosophy" ? "#ffd700" : isUnlocked ? academyLevelColor(selLevel) : "#00e5ff" }}>
@@ -522,7 +599,7 @@ export default function AcademyPage() {
                 {parentField && (
                   <div className="text-gray-600 text-[10px] mt-0.5">under {parentField.label}</div>
                 )}
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
                     style={{ color: statColor, border: `1px solid ${statColor}55`, background: `${statColor}11` }}>
                     {statLabel}
@@ -535,69 +612,75 @@ export default function AcademyPage() {
                 </div>
               </div>
 
-              <div className="w-px h-12 bg-gray-800" />
+              <div className="hidden sm:block w-px h-12 bg-gray-800 shrink-0" />
 
-              {!isUnlocked ? (
-                <div className="flex flex-col items-center gap-1">
-                  {!parentOk ? (
-                    <span className="px-4 py-1.5 border border-gray-700 text-gray-500 tracking-wider text-[11px]">
-                      LOCKED
-                    </span>
-                  ) : (
-                    <button onClick={unlockSelected} disabled={actionLoading || merits < UNLOCK_COST}
-                      className="px-4 py-1.5 border border-amber-800 text-amber-400 hover:bg-amber-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                      {actionLoading ? "..." : "UNLOCK"}
-                    </button>
-                  )}
-                  <span className="text-[10px] text-gray-600">
-                    {parentOk ? `${UNLOCK_COST} merits · +1 ${statLabel}` : `Unlock ${parentField?.label ?? ""} first`}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  {atMax ? (
-                    <span className="px-4 py-1.5 border border-yellow-700 text-yellow-500 tracking-wider text-[11px]">
-                      MAX LEVEL
-                    </span>
-                  ) : (
-                    <button onClick={upgradeSelected} disabled={actionLoading || merits < nextCost}
-                      className="px-4 py-1.5 border border-amber-700 text-amber-300 hover:bg-amber-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
-                      {actionLoading ? "..." : `L${selLevel}→${selLevel + 1}`}
-                    </button>
-                  )}
-                  {!atMax && (
+              <div className="flex flex-row flex-wrap gap-3 items-start">
+                {!isUnlocked ? (
+                  <div className="flex flex-col items-start gap-1">
+                    {!parentOk ? (
+                      <span className="px-4 py-2 border border-gray-700 text-gray-500 tracking-wider text-[11px]">
+                        LOCKED
+                      </span>
+                    ) : (
+                      <button onClick={unlockSelected} disabled={actionLoading || merits < UNLOCK_COST}
+                        className="px-4 py-2 border border-amber-800 text-amber-400 hover:bg-amber-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                        {actionLoading ? "..." : "UNLOCK"}
+                      </button>
+                    )}
                     <span className="text-[10px] text-gray-600">
-                      {nextCost.toLocaleString()} merits · +1 {statLabel}
+                      {parentOk ? `${UNLOCK_COST} merits · +1 ${statLabel}` : `Unlock ${parentField?.label ?? ""} first`}
                     </span>
-                  )}
-                </div>
-              )}
-
-              <button onClick={() => { selectedRef.current = null; setSelectedId(null); }}
-                className="text-gray-600 hover:text-gray-400 px-1 text-base">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-start gap-1">
+                    {atMax ? (
+                      <span className="px-4 py-2 border border-yellow-700 text-yellow-500 tracking-wider text-[11px]">
+                        MAX LEVEL
+                      </span>
+                    ) : (
+                      <button onClick={upgradeSelected} disabled={actionLoading || merits < nextCost}
+                        className="px-4 py-2 border border-amber-700 text-amber-300 hover:bg-amber-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors tracking-wider">
+                        {actionLoading ? "..." : `L${selLevel}→${selLevel + 1}`}
+                      </button>
+                    )}
+                    {!atMax && (
+                      <span className="text-[10px] text-gray-600">
+                        {nextCost.toLocaleString()} merits · +1 {statLabel}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <button onClick={() => { selectedRef.current = null; setSelectedId(null); }}
+                  className="text-gray-600 hover:text-gray-400 px-1 text-base self-start">✕</button>
+              </div>
             </div>
           );
         })()}
 
         {/* Legend */}
-        <div className="absolute top-3 right-3 border border-gray-800 bg-[#05050f]/80 px-3 py-2 text-[10px] font-mono space-y-1 pointer-events-none">
+        <div className="absolute top-3 right-3 border border-gray-800 bg-[#05050f]/80 px-2 sm:px-3 py-2 text-[10px] font-mono space-y-0.5 pointer-events-none">
           <div className="text-gray-500 uppercase tracking-widest mb-1">Levels</div>
           {[
-            { range: "1-100",   color: "#00e5ff" },
-            { range: "101-200", color: "#00ff88" },
-            { range: "201-300", color: "#ffaa00" },
-            { range: "301-400", color: "#ff6600" },
-            { range: "401-500", color: "#ffd700" },
+            { range: "1–50",    color: "#00e5ff" },
+            { range: "51–100",  color: "#00ccee" },
+            { range: "101–150", color: "#00ffcc" },
+            { range: "151–200", color: "#00ff88" },
+            { range: "201–250", color: "#55ff44" },
+            { range: "251–300", color: "#aaff00" },
+            { range: "301–350", color: "#ffee00" },
+            { range: "351–400", color: "#ffaa00" },
+            { range: "401–450", color: "#ff5500" },
+            { range: "451–500", color: "#ffd700" },
           ].map(({ range, color }) => (
-            <div key={range} className="flex items-center gap-2 text-gray-600">
-              <span className="w-2 h-2 rounded-full inline-block" style={{ background: color, boxShadow: `0 0 4px ${color}` }} />
-              L{range}
+            <div key={range} className="flex items-center gap-1.5 text-gray-600">
+              <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: color, boxShadow: `0 0 4px ${color}` }} />
+              <span>{range}</span>
             </div>
           ))}
-          <div className="text-gray-700 mt-2 pt-2 border-t border-gray-800 space-y-0.5">
-            <div>Click = select</div>
-            <div>Drag = pan</div>
-            <div>Scroll = zoom</div>
+          <div className="hidden sm:block text-gray-700 mt-2 pt-2 border-t border-gray-800 space-y-0.5">
+            <div>Tap = select</div>
+            <div>Drag/swipe = pan</div>
+            <div>Pinch/scroll = zoom</div>
           </div>
         </div>
       </div>

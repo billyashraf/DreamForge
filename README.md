@@ -477,7 +477,15 @@ API: `GET /api/admin/teams` · `PATCH /api/admin/teams { teamId, action: "suspen
 
 ## 🗺️ Roadmap
 
-### ✅ Completed Phases
+> DreameForge is built across three epochs — from browser game to mobile to full AAA title.
+
+---
+
+### 🌐 Epoch I — WEB
+
+The founding epoch: a complete, full-featured browser MMORPG.
+
+#### ✅ Completed Phases
 
 - ✅ **Phase 1** — Auth, character creation, dashboard
 - ✅ **Phase 2** — Missions, combat, inventory & market
@@ -491,9 +499,9 @@ API: `GET /api/admin/teams` · `PATCH /api/admin/teams { teamId, action: "suspen
 - ✅ **Phase 10** — Notifications & activity log
 - ✅ **Phase 11** — Admin team management
 
-### 🔲 Upcoming Phases
+#### 🔲 Upcoming
 
-#### ⚔️ Phase 12 — Mars Chess: Battle Royale Mechanics
+##### ⚔️ Phase 12 — Mars Chess: Battle Royale Mechanics
 
 A competitive PvP layer set on Mars where guilds and players clash in a chess-inspired battle royale format.
 
@@ -505,7 +513,7 @@ A competitive PvP layer set on Mars where guilds and players clash in a chess-in
 - [ ] Guild war declarations — challenge rival guilds for territory control
 - [ ] Battle royale events — last guild standing wins seasonal rewards
 
-#### 🌐 Phase 13 — Web3 Integration
+##### 🌐 Phase 13 — Web3 Integration
 
 Bringing true ownership and decentralized economy to the DreameForge universe.
 
@@ -516,6 +524,73 @@ Bringing true ownership and decentralized economy to the DreameForge universe.
 - [ ] Smart contract guilds — guild treasury held on-chain, votes for spending
 - [ ] Play-to-earn rewards — Mars Rating converted to token drops at season end
 - [ ] Chain: TBD (Ethereum L2 / Polygon / Base)
+
+---
+
+### 📱 Epoch II — MOBILE
+
+Port and evolve DreameForge into a first-class mobile experience — from responsive PWA to native app.
+
+##### Phase 14 — Progressive Web App (PWA)
+
+- [ ] Installable on iOS & Android home screens
+- [ ] Service worker offline caching — play core features without internet
+- [ ] App manifest, splash screens, and native-feel navigation
+- [ ] Optimized touch targets throughout the UI
+
+##### Phase 15 — Push Notifications & Background Sync
+
+- [ ] Web Push notifications — mission timers, owl delivery alerts, battle pings
+- [ ] Background sync for owl inbox and notification badge
+- [ ] Configurable notification preferences per player
+
+##### Phase 16 — Mobile-Native Combat & Canvas UI
+
+- [ ] Swipe gestures for mission selection and inventory management
+- [ ] Haptic feedback on key actions (mission complete, death, level-up)
+- [ ] Pinch-to-zoom Curse Tree and Academy fully touch-optimized
+- [ ] Mobile HUD redesign — thumb-zone-friendly layout
+
+##### Phase 17 — React Native Companion App
+
+- [ ] iOS & Android native app via React Native / Expo
+- [ ] Shared auth session with the web game (JWT handoff)
+- [ ] Native camera integration — scan QR codes to join guilds or teams
+- [ ] Offline character sheet with last-synced stats
+
+---
+
+### 🎮 Epoch III — AAA
+
+Elevate DreameForge from a browser game into a full-scale gaming product.
+
+##### Phase 18 — 3D Galaxy Map & World Engine
+
+- [ ] Three.js / WebGPU 3D world map replacing the text location list
+- [ ] Real-time particle systems for space travel between locations
+- [ ] Procedurally generated terrain for Earth, Mars, Moon Junkyard biomes
+- [ ] Cinematic camera transitions on travel
+
+##### Phase 19 — Real-time PvP Combat Engine
+
+- [ ] WebSocket-based server-authoritative combat — no more turn-based dice
+- [ ] Animated skill activations tied to the Curse Tree
+- [ ] 1v1 dueling system with spectator feed
+- [ ] Guild war real-time battles on Mars territory map
+
+##### Phase 20 — Voice, Avatar & Cosmetics System
+
+- [ ] Spatial audio in guild halls and team telepathy channels
+- [ ] 3D avatar customization — armor, weapons, shadow form visual skins
+- [ ] Emote system and animated reactions
+- [ ] Seasonal cosmetic drops tied to Mars Rating
+
+##### Phase 21 — Console & Desktop Client
+
+- [ ] Electron / Tauri desktop client for Windows, macOS, Linux
+- [ ] Controller support — full gamepad mapping
+- [ ] Console submission (PlayStation, Xbox) via web runtime
+- [ ] Cross-platform progress — same account, any device
 
 ---
 
