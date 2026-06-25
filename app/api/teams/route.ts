@@ -12,7 +12,7 @@ export async function GET() {
 
   await connectDB();
 
-  const teams = await Team.find({ isOpen: true })
+  const teams = await Team.find({ isOpen: true, isSuspended: { $ne: true } })
     .populate("leaderId", "name level currentLocation")
     .sort({ createdAt: -1 })
     .limit(30);

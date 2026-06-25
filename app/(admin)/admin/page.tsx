@@ -84,6 +84,9 @@ export default function AdminOverviewPage() {
           <a href="/admin/guilds" className="p-3 border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition-colors">
             Manage Guilds →
           </a>
+          <a href="/admin/teams" className="p-3 border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition-colors">
+            Manage Teams →
+          </a>
         </div>
       </Card>
     </div>

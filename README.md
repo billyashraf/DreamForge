@@ -440,6 +440,19 @@ Admins and moderators can manage all guilds at `/admin/guilds`:
 
 API: `GET /api/admin/guilds` · `PATCH /api/admin/guilds { guildId, action: "suspend"|"unsuspend"|"delete" }`
 
+#### Admin Team Management
+
+Admins and moderators can manage all teams at `/admin/teams`:
+- Search by name
+- See each team's leader, member count / max size, activity, and open/closed status
+- **Suspend** a team (hides it from the Team Hall while preserving membership)
+- **Unsuspend** a team
+- **Delete** a team (admin only — removes all members permanently and cleans up character references)
+
+Suspended teams are hidden from the public Team Hall but members can still access them directly.
+
+API: `GET /api/admin/teams` · `PATCH /api/admin/teams { teamId, action: "suspend"|"unsuspend"|"delete" }`
+
 #### Guild API Routes
 
 | Method | Route | Description |
@@ -454,6 +467,7 @@ API: `GET /api/admin/guilds` · `PATCH /api/admin/guilds { guildId, action: "sus
 | PATCH | /api/guilds/[id]/position | Set member positions (array, max 3) |
 | GET/PATCH | /api/guilds/[id]/applications | List / accept or reject applications |
 | GET/PATCH | /api/admin/guilds | Admin: list all guilds / suspend/delete |
+| GET/PATCH | /api/admin/teams | Admin: list all teams / suspend/delete |
 
 ## Stack
 

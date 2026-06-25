@@ -14,6 +14,7 @@ export interface ITeam extends Document {
   activity: string;
   maxSize: number;
   isOpen: boolean;
+  isSuspended?: boolean;
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const TeamSchema = new Schema<ITeam>(
     activity: { type: String, default: "exploring" },
     maxSize: { type: Number, default: 4, min: 2, max: 6 },
     isOpen: { type: Boolean, default: true },
+    isSuspended: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
