@@ -1,4 +1,4 @@
-export const MAX_ACADEMY_LEVEL = 500;
+export const MAX_ACADEMY_LEVEL = 700;
 export const UNLOCK_COST = 50;
 export const upgradeCost = (level: number) =>
   Math.floor(100 * Math.pow(level, 1.2));
@@ -173,7 +173,7 @@ export function computeAcademyLayout(): Map<string, { x: number; y: number }> {
   return positions;
 }
 
-// 10 color grades across MAX_ACADEMY_LEVEL (500)
+// 12 color grades across MAX_ACADEMY_LEVEL (700)
 export function academyLevelColor(level: number): string {
   if (level <= 50)  return "#00e5ff";
   if (level <= 100) return "#00ccee";
@@ -184,7 +184,9 @@ export function academyLevelColor(level: number): string {
   if (level <= 350) return "#ffee00";
   if (level <= 400) return "#ffaa00";
   if (level <= 450) return "#ff5500";
-  return "#ffd700";
+  if (level <= 500) return "#ffd700";
+  if (level <= 600) return "#e879f9";
+  return "#ffffff";
 }
 
 export const ACADEMY_STAT_GLOW: Record<AcademyStat, string> = {

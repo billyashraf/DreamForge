@@ -31,10 +31,10 @@ function nearestField(wx: number, wy: number, threshold = 22): AcademyField | nu
   return best;
 }
 
-// Node radius scales more aggressively with level: level 0 → 5px, level 500 → ~32px
+// Node radius scales more aggressively with level: level 0 → 5px, level 700 → ~42px
 function nodeRadius(level: number, isSelected: boolean): number {
   if (level <= 0) return isSelected ? 7 : 5;
-  return 7 + Math.min(level, 500) * 0.05;
+  return 7 + Math.min(level, 700) * 0.05;
 }
 
 export default function AcademyPage() {
@@ -671,6 +671,8 @@ export default function AcademyPage() {
             { range: "351–400", color: "#ffaa00" },
             { range: "401–450", color: "#ff5500" },
             { range: "451–500", color: "#ffd700" },
+            { range: "501–600", color: "#e879f9" },
+            { range: "601–700", color: "#ffffff" },
           ].map(({ range, color }) => (
             <div key={range} className="flex items-center gap-1.5 text-gray-600">
               <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: color, boxShadow: `0 0 4px ${color}` }} />
