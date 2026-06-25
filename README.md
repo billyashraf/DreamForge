@@ -292,6 +292,8 @@ Titles are earned by leveling up Academy fields. Each field awards a title based
 | ◤ Beast Slayer | 351 – 400 | Red |
 | ◫ Scientist | 401 – 450 | Purple |
 | ✦ Sage | 451 – 500 | Gold |
+| ✧ Game Master | 501 – 600 | Fuchsia |
+| ✺ World Seeder | 601 – 700 | White |
 
 The profile banner shows the **highest-tier title** earned across all fields. Below it, the **Academy Titles** card lists every unlocked field with its current level and title tier. Titles are earned independently per field — you can be a Sage in Algorithms while still a Scavenger in Quantum Computing.
 
