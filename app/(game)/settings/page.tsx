@@ -132,14 +132,13 @@ export default function SettingsPage() {
                 Your account is unverified. Check your inbox or request a new verification email.
                 Unverified accounts are deleted after 5 days.
               </p>
-              {resendMsg && (
-                <div className={`text-xs font-mono p-2 border mb-3 ${resendMsg.includes("sent") ? "border-green-800 text-green-400" : "border-red-800 text-red-400"}`}>
-                  {resendMsg}
-                </div>
-              )}
+              <div className="text-xs font-mono text-yellow-600 border border-yellow-900 bg-yellow-950/20 px-3 py-2 mb-3">
+                ⚠ Email sending is not configured — this button is temporarily disabled.
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
+                disabled
                 loading={resendLoading}
                 onClick={handleResendVerification}
               >
@@ -154,6 +153,9 @@ export default function SettingsPage() {
           <p className="text-xs font-mono text-gray-500 mb-4">
             Enter your email address and we will send you a password reset link.
           </p>
+          <div className="text-xs font-mono text-yellow-600 border border-yellow-900 bg-yellow-950/20 px-3 py-2 mb-4">
+            ⚠ Email sending is not configured — this button is temporarily disabled.
+          </div>
           <form onSubmit={handleForgotPassword} className="space-y-3">
             <Input
               label="Email address"
@@ -161,14 +163,13 @@ export default function SettingsPage() {
               value={resetEmail}
               onChange={(e) => setResetEmail(e.target.value)}
               placeholder={user.email}
-              required
             />
             {resetMsg && (
               <div className={`text-xs font-mono p-2 border ${resetMsg.toLowerCase().includes("sent") || resetMsg.toLowerCase().includes("registered") ? "border-green-800 text-green-400" : "border-red-800 text-red-400"}`}>
                 {resetMsg}
               </div>
             )}
-            <Button type="submit" loading={resetLoading} size="sm">
+            <Button type="submit" loading={resetLoading} size="sm" disabled>
               Send Reset Link
             </Button>
           </form>

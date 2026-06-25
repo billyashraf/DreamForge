@@ -535,7 +535,7 @@ Admins and moderators manage user roles at `/admin/users`. Permissions are hiera
 | Promote player → moderator | ✓ | ✓ |
 | Promote moderator → admin | ✗ | ✓ |
 | Demote admin → moderator | ✗ | ✓ |
-| Demote moderator → player | ✗ | ✓ |
+| Demote moderator → player | ✓ | ✓ |
 
 The user list now shows an **UNVERIFIED** label in orange for accounts that haven't confirmed their email.
 
@@ -667,6 +667,8 @@ The founding epoch: a complete, full-featured browser MMORPG.
 #### ✅ Completed Phases
 
 - ✅ **Phase 1** — Auth, character creation, dashboard
+  - [ ] Email verification *(requires SMTP / Resend domain configuration)*
+  - [ ] Password reset via email *(requires SMTP / Resend domain configuration)*
 - ✅ **Phase 2** — Missions, combat, inventory & market
 - ✅ **Phase 3** — Shadow Form system, locations & travel
 - ✅ **Phase 4** — Curse Tree, Academy (75+ fields across 8 depth levels), shadow owl messaging
