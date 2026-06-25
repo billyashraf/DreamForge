@@ -18,7 +18,7 @@ export async function GET(
   await connectDB();
 
   const target = await Character.findById(characterId)
-    .select("name level shadowForm currentLocation strength intelligence agility guildIds teamId isDead merits")
+    .select("name level shadowForm currentLocation strength intelligence agility guildIds teamIds isDead merits")
     .lean();
 
   if (!target) return err("Character not found", 404);
@@ -26,13 +26,13 @@ export async function GET(
   const viewer = await Character.findOne({ userId: session.userId })
     .select("_id name owlReturnAt");
 
-  const [guilds, team] = await Promise.all([
+  const [guilds, teams] = await Promise.all([
     target.guildIds?.length
       ? Guild.find({ _id: { $in: target.guildIds } }).select("name tag leaderId memberPositions").lean()
       : Promise.resolve([]),
-    target.teamId
-      ? Team.findById(target.teamId).select("name").lean()
-      : Promise.resolve(null),
+    target.teamIds?.length
+      ? Team.find({ _id: { $in: target.teamIds } }).select("_id name").lean()
+      : Promise.resolve([]),
   ]);
 
   const isOwn = viewer?._id.toString() === characterId;
@@ -47,7 +47,7 @@ export async function GET(
         : (g.memberPositions ?? []).find((p) => p.memberId.toString() === characterId)?.positions ?? [];
       return { _id: g._id.toString(), name: g.name, tag: g.tag, positions };
     }),
-    teamName: team ? (team as { name: string }).name : null,
+    teams: teams.map((t) => ({ _id: t._id.toString(), name: (t as { name: string }).name })),
     isOwn,
     viewerOwlAvailable: owlAvailable,
     viewerOwlReturnAt: viewer?.owlReturnAt ?? null,

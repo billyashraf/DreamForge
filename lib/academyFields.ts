@@ -81,6 +81,45 @@ export const ACADEMY_FIELDS: AcademyField[] = [
   // Arts children
   { id: "music-theory",        parent: "arts",             label: "Music Theory",       stat: "agility"      },
   { id: "literature",          parent: "arts",             label: "Literature",         stat: "intelligence" },
+  // Algebra children
+  { id: "linear-algebra",         parent: "algebra",           label: "Linear Algebra",          stat: "intelligence" },
+  { id: "abstract-algebra",       parent: "algebra",           label: "Abstract Algebra",         stat: "intelligence" },
+  // Calculus children
+  { id: "differential-equations", parent: "calculus",          label: "Differential Equations",  stat: "intelligence" },
+  { id: "complex-analysis",       parent: "calculus",          label: "Complex Analysis",         stat: "intelligence" },
+  // Statistics children
+  { id: "probability-theory",     parent: "statistics",        label: "Probability Theory",       stat: "intelligence" },
+  { id: "data-science",           parent: "statistics",        label: "Data Science",             stat: "intelligence" },
+  // Algorithms children
+  { id: "graph-theory",           parent: "algorithms",        label: "Graph Theory",             stat: "intelligence" },
+  { id: "complexity-theory",      parent: "algorithms",        label: "Complexity Theory",        stat: "intelligence" },
+  // Machine Learning children
+  { id: "neural-networks",        parent: "machine-learning",  label: "Neural Networks",          stat: "intelligence" },
+  { id: "reinforcement-learning", parent: "machine-learning",  label: "Reinforcement Learning",   stat: "intelligence" },
+  { id: "computer-vision",        parent: "machine-learning",  label: "Computer Vision",          stat: "intelligence" },
+  // Quantum Mechanics children
+  { id: "quantum-computing",      parent: "quantum-mechanics", label: "Quantum Computing",        stat: "intelligence" },
+  { id: "quantum-field-theory",   parent: "quantum-mechanics", label: "Quantum Field Theory",     stat: "intelligence" },
+  // Materials Science children
+  { id: "nanotechnology",         parent: "materials-science", label: "Nanotechnology",           stat: "intelligence" },
+  { id: "metamaterials",          parent: "materials-science", label: "Metamaterials",            stat: "intelligence" },
+  // Genetics children
+  { id: "genomics",               parent: "genetics",          label: "Genomics",                 stat: "intelligence" },
+  { id: "epigenetics",            parent: "genetics",          label: "Epigenetics",              stat: "intelligence" },
+  // Neuroscience children
+  { id: "neuromorphic-computing", parent: "neuroscience",      label: "Neuromorphic Computing",   stat: "intelligence" },
+  { id: "brain-mapping",          parent: "neuroscience",      label: "Brain Mapping",            stat: "intelligence" },
+  // Astrophysics children
+  { id: "planetary-science",      parent: "astrophysics",      label: "Planetary Science",        stat: "intelligence" },
+  { id: "dark-matter",            parent: "astrophysics",      label: "Dark Matter",              stat: "intelligence" },
+  // Cognitive Science children
+  { id: "consciousness-studies",  parent: "cognitive-science", label: "Consciousness Studies",    stat: "intelligence" },
+  { id: "cognitive-linguistics",  parent: "cognitive-science", label: "Cognitive Linguistics",    stat: "intelligence" },
+  // Game Theory children
+  { id: "mechanism-design",       parent: "game-theory",       label: "Mechanism Design",         stat: "intelligence" },
+  // Metaphysics children
+  { id: "ontology",               parent: "metaphysics",       label: "Ontology",                 stat: "intelligence" },
+  { id: "philosophy-of-mind",     parent: "metaphysics",       label: "Philosophy of Mind",       stat: "intelligence" },
 ];
 
 const LEAF_SPACING = 72;

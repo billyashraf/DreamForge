@@ -5,10 +5,16 @@
   --foreground: #e5e7eb;
 }
 
+html {
+  background: var(--background);
+  min-height: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
+  min-height: 100dvh;
 }
 
 * {

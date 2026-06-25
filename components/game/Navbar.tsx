@@ -341,6 +341,17 @@ export function Navbar() {
             </div>
           )}
 
+          {/* Profile icon */}
+          {character && (
+            <Link
+              href={`/profile/${character.id}`}
+              title="My Profile"
+              className="text-sm font-mono text-gray-600 hover:text-cyan-400 transition-colors px-1"
+            >
+              ◎
+            </Link>
+          )}
+
           <button
             onClick={logout}
             disabled={loggingOut}
@@ -391,6 +402,9 @@ export function Navbar() {
             <MobileNavDisabled title="Requires Rider form" className="text-yellow-900">Academy</MobileNavDisabled>
           )}
           <MobileNavLink href="/shadow-form" onClick={() => setMobileOpen(false)} className="text-indigo-600">Shadow Form</MobileNavLink>
+          {character && (
+            <MobileNavLink href={`/profile/${character.id}`} onClick={() => setMobileOpen(false)} className="text-cyan-600">My Profile</MobileNavLink>
+          )}
           {user?.role !== "player" && (
             <MobileNavLink href="/admin" onClick={() => setMobileOpen(false)} className="text-red-500">Admin</MobileNavLink>
           )}

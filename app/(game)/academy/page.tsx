@@ -517,7 +517,7 @@ export default function AcademyPage() {
   // ── Gate: Rider or Assassin form required ─────────────────────────────────
   if (pageReady && shadowForm !== "rider" && shadowForm !== "assassin") {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] gap-6 text-center px-4">
+      <div className="flex flex-col items-center justify-center h-[calc(100dvh-120px)] gap-6 text-center px-4">
         <div className="text-5xl text-yellow-900">◈</div>
         <div className="font-mono text-amber-500 text-lg font-bold tracking-widest uppercase">Academy Locked</div>
         <div className="font-mono text-gray-500 text-sm max-w-xs leading-relaxed">
@@ -536,7 +536,7 @@ export default function AcademyPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="-mx-4 -mt-4 -mb-4 flex flex-col bg-black" style={{ height: "calc(100vh - 56px)", overflow: "hidden" }}>
+    <div className="-mx-4 -mt-4 -mb-4 flex flex-col bg-black" style={{ height: "calc(100dvh - 56px)", overflow: "hidden" }}>
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-[#05050f] shrink-0 gap-2 flex-wrap">

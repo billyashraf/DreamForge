@@ -274,7 +274,35 @@ Poison accumulates damage based on real elapsed seconds whenever the server hand
 
 ### Character Profiles
 
-Every character has a public profile page at `/profile/[characterId]` showing level, shadow form, location, stats (STR/INT/AGI), guild memberships, and team. Character names in the CharacterPanel and chat windows are clickable links to this page.
+Every character has a public profile page at `/profile/[characterId]` showing their **title banner**, level, shadow form, location, stats (STR/INT/AGI), guild memberships, and teams. Character names in the CharacterPanel and chat windows are clickable links to this page.
+
+#### Title System
+
+Characters earn progressive titles based on level. Each title has a unique colored banner displayed at the top of their profile:
+
+| Title | Level Range | Color |
+|-------|-------------|-------|
+| ⚙ Scavenger | 1 – 50 | Gray |
+| ⚔ Monster Hunter | 51 – 100 | Green |
+| ◉ Beast Tamer | 101 – 150 | Cyan |
+| ◈ Hacker | 151 – 200 | Violet |
+| ◆ Beast Hunter | 201 – 250 | Amber |
+| ◧ Architect | 251 – 300 | Sky |
+| ◎ System Engineer | 301 – 350 | Blue |
+| ◤ Beast Slayer | 351 – 400 | Red |
+| ◫ Scientist | 401 – 450 | Purple |
+| ✦ Sage | 451 – 500 | Gold |
+
+The banner also shows how many levels remain until the next title.
+
+#### Own Profile Sections
+
+When viewing your own profile, three additional sections appear:
+- **Messages** — last 5 received owl inbox messages with a link to the full inbox
+- **My Guilds** — all your guilds as clickable links to each guild's page
+- **My Teams** — all your teams as clickable links to each team's page
+
+A **◎ profile icon** in the top navbar links directly to your own character profile.
 
 ### Shadow Owl (Async Messaging)
 
@@ -490,7 +518,7 @@ The founding epoch: a complete, full-featured browser MMORPG.
 - ✅ **Phase 1** — Auth, character creation, dashboard
 - ✅ **Phase 2** — Missions, combat, inventory & market
 - ✅ **Phase 3** — Shadow Form system, locations & travel
-- ✅ **Phase 4** — Curse Tree, Academy, shadow owl messaging
+- ✅ **Phase 4** — Curse Tree, Academy (75+ fields across 8 depth levels), shadow owl messaging
 - ✅ **Phase 5** — Guild system (apply, rank, positions, chat)
 - ✅ **Phase 6** — Admin panel (users, missions, guilds)
 - ✅ **Phase 7** — Live chat (team telepathy & guild echo)
@@ -548,7 +576,7 @@ Port and evolve DreameForge into a first-class mobile experience — from respon
 
 - [ ] Swipe gestures for mission selection and inventory management
 - [ ] Haptic feedback on key actions (mission complete, death, level-up)
-- [ ] Pinch-to-zoom Curse Tree and Academy fully touch-optimized
+- ✅ Pinch-to-zoom Curse Tree and Academy fully touch-optimized
 - [ ] Mobile HUD redesign — thumb-zone-friendly layout
 
 ##### Phase 17 — React Native Companion App

@@ -269,7 +269,7 @@ export default function ShadowFormPage() {
   }
 
   return (
-    <div className="-mx-4 -mt-4 -mb-4 flex flex-col bg-black" style={{ height: "calc(100vh - 56px)", overflow: "hidden" }}>
+    <div className="-mx-4 -mt-4 -mb-4 flex flex-col bg-black" style={{ height: "calc(100dvh - 56px)", overflow: "hidden" }}>
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-[#05050f] shrink-0">
