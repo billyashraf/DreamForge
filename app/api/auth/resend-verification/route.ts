@@ -24,8 +24,12 @@ export async function POST() {
   try {
     await sendVerificationEmail(user.email, verificationToken);
   } catch (e) {
-    console.error("[resend-verification] email send failed:", e);
-    return err("Failed to send verification email. Check your SMTP settings.");
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[resend-verification] email send failed:", detail);
+    const msg = process.env.NODE_ENV !== "production"
+      ? `Email error: ${detail}`
+      : "Failed to send verification email. Check your SMTP settings.";
+    return err(msg);
   }
 
   return ok({ message: "Verification email sent." });

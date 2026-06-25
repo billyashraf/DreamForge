@@ -17,9 +17,11 @@ function isSmtpConfigured(): boolean {
 
 function getFrom(): string {
   const configured = process.env.SMTP_FROM;
-  // SMTP_FROM must be a full email address (e.g. noreply@glassmasks.com), not just a domain
-  if (configured && configured.includes("@")) return configured;
-  if (isResendProvider()) return "onboarding@resend.dev";
+  // Must be a full email address — bare domain like "glassmasks.com" is invalid
+  if (configured && configured.includes("@")) {
+    return configured.includes("<") ? configured : `"DreameForge" <${configured}>`;
+  }
+  if (isResendProvider()) return '"DreameForge" <onboarding@resend.dev>';
   return `"DreameForge" <${process.env.SMTP_USER}>`;
 }
 
