@@ -68,7 +68,8 @@ export async function PATCH(req: NextRequest) {
       break;
 
     case "unban":
-      if (actorLevel <= targetLevel) return forbidden();
+      // Admin can unban anyone; moderator can only unban players below their level
+      if (session.role !== "admin" && actorLevel <= targetLevel) return forbidden();
       target.isBanned = false;
       target.banReason = undefined;
       break;

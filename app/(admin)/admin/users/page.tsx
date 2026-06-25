@@ -156,7 +156,7 @@ export default function AdminUsersPage() {
                               Ban
                             </Button>
                           )}
-                          {canAct && u.isBanned && (
+                          {(user?.role === "admin" || canAct) && u.isBanned && (
                             <Button
                               size="sm"
                               variant="success"
