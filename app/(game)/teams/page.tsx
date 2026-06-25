@@ -146,7 +146,10 @@ export default function TeamsPage() {
     mars: "Mars",
   };
 
-  const charTeamIds = character?.teamIds ?? [];
+  const myCharId = character?.id ?? "";
+  const charTeamIds = (character?.teamIds ?? []) as string[];
+  const isAlreadyMember = (teamId: string, members: string[]) =>
+    charTeamIds.includes(teamId) || members.includes(myCharId);
 
   return (
     <div className="space-y-4">
@@ -217,7 +220,7 @@ export default function TeamsPage() {
           ) : (
             <div className="space-y-2">
               {teams.map((t) => {
-                const isMine = charTeamIds.includes(t._id);
+                const isMine = isAlreadyMember(t._id, t.members);
                 const canApply = !isMine && t.isOpen && t.members.length < t.maxSize;
                 return (
                   <div key={t._id} className="border border-gray-800 bg-gray-950 p-4">
