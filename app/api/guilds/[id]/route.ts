@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { ok, err, unauthorized, forbidden } from "@/lib/response";
 import Guild from "@/models/Guild";
 import Character from "@/models/Character";
+import { transferGuildLeadershipIfInactive } from "@/lib/transferGuildLeadership";
 
 export async function GET(
   _req: NextRequest,
@@ -15,6 +16,9 @@ export async function GET(
   const { id } = await params;
 
   await connectDB();
+
+  // Transfer leadership if leader has been inactive for 2+ days
+  await transferGuildLeadershipIfInactive(id);
 
   const guild = await Guild.findById(id).lean();
   if (!guild) return err("Guild not found", 404);
