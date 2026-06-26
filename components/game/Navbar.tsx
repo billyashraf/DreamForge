@@ -251,7 +251,7 @@ export function Navbar() {
                 ▤
               </button>
               {openPopup === "log" && (
-                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-32px)] max-w-xs sm:absolute sm:top-8 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 sm:w-72 bg-gray-950 border border-gray-800 shadow-xl">
+                <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 sm:absolute sm:inset-x-auto sm:top-8 sm:right-0 sm:translate-y-0 sm:w-72 bg-gray-950 border border-gray-800 shadow-xl">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
                     <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Activity Log</span>
                     <span className="text-[10px] font-mono text-amber-600 cursor-pointer hover:text-amber-400" onClick={() => { router.push("/logs"); setOpenPopup(null); }}>
@@ -298,7 +298,7 @@ export function Navbar() {
                 )}
               </button>
               {openPopup === "notif" && (
-                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-32px)] max-w-xs sm:absolute sm:top-8 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 sm:w-80 bg-gray-950 border border-gray-800 shadow-xl">
+                <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 sm:absolute sm:inset-x-auto sm:top-8 sm:right-0 sm:translate-y-0 sm:w-80 bg-gray-950 border border-gray-800 shadow-xl">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
                     <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Notifications</span>
                     <span className="text-[10px] font-mono text-cyan-600 cursor-pointer hover:text-cyan-400" onClick={() => { router.push("/notifications"); setOpenPopup(null); }}>
