@@ -302,7 +302,7 @@ export default function GuildProfilePage() {
             </div>
           </div>
           <div className="flex flex-col gap-2 shrink-0">
-            {!isMember && !hasApplied && (
+            {!isMember && !isLeader && !hasApplied && (
               <Button size="sm" variant="secondary" loading={applying} onClick={applyToGuild}>Apply to Join</Button>
             )}
             {hasApplied && !isMember && (

@@ -32,7 +32,7 @@ export async function POST(
     if (!isMember) return err("You are not a member of this guild");
 
     if (guild.leaderId.toString() === charIdStr)
-      return err("Guild leader cannot leave. Transfer leadership or disband the guild first.");
+      return err("Guild leader cannot leave. Disband the guild first.");
 
     guild.members = guild.members.filter((m) => m.toString() !== charIdStr) as never;
     if (guild.memberRanks) {

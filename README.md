@@ -401,6 +401,9 @@ DreameForge features a full guild system with an **application flow**, **chess +
 
 Players **apply** to guilds rather than joining directly. Each application can include an optional message. The guild leader (or any member with the **Queen** position) reviews applications and accepts or rejects them.
 
+- Guild leaders **cannot apply to a guild they lead** — the Apply button is hidden and the API blocks it.
+- The guild leader **cannot leave** — they must disband the guild first.
+
 Limits:
 - Create up to **10 guilds** (as leader)
 - Join up to **49 guilds** (as member)

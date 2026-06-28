@@ -34,6 +34,9 @@ export async function POST(
     if (!guild.applications) guild.applications = [];
 
     const charIdStr = character._id.toString();
+    if (guild.leaderId.toString() === charIdStr)
+      return err("You cannot apply to a guild you lead");
+
     const alreadyMember = guild.members.some((m) => m.toString() === charIdStr);
     if (alreadyMember) return err("You are already a member of this guild");
 
