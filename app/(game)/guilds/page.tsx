@@ -6,6 +6,7 @@ import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { Dialog } from "@/components/ui/Dialog";
 
 interface Guild {
   _id: string;
@@ -34,6 +35,7 @@ export default function GuildsPage() {
   const [joinedGuilds, setJoinedGuilds] = useState<MyGuild[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
+  const [applyDlg, setApplyDlg] = useState<{ open: boolean; guildId: string }>({ open: false, guildId: "" });
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", tag: "", description: "" });
   const [createError, setCreateError] = useState("");
@@ -70,8 +72,13 @@ export default function GuildsPage() {
 
   useEffect(() => { fetchGuilds(); }, [fetchGuilds]);
 
-  async function applyToGuild(guildId: string) {
-    const message = prompt("Optional application message (leave blank to skip):") ?? "";
+  function applyToGuild(guildId: string) {
+    setApplyDlg({ open: true, guildId });
+  }
+
+  async function submitApplication(message: string) {
+    const { guildId } = applyDlg;
+    setApplyDlg({ open: false, guildId: "" });
     setApplying(guildId);
     const res = await fetch(`/api/guilds/${guildId}/apply`, {
       method: "POST",
@@ -314,6 +321,17 @@ export default function GuildsPage() {
           )}
         </div>
       )}
+
+      <Dialog
+        open={applyDlg.open}
+        title="Apply to Guild"
+        message="Add an optional message with your application."
+        confirmLabel="Send Application"
+        withInput
+        inputPlaceholder="Optional message..."
+        onConfirm={(message = "") => submitApplication(message)}
+        onCancel={() => setApplyDlg({ open: false, guildId: "" })}
+      />
     </div>
   );
 }

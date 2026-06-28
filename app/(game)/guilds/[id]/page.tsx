@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Dialog } from "@/components/ui/Dialog";
 
 interface GuildMember {
   _id: string;
@@ -33,7 +34,6 @@ interface Application {
   appliedAt: string;
 }
 
-// ── Rank metadata ──────────────────────────────────────────────────────────
 interface RankMeta { symbol: string; label: string; color: string; group: string }
 const RANK_META: Record<string, RankMeta> = {
   king:      { symbol: "♔", label: "King",      color: "text-yellow-400", group: "Chess"       },
@@ -69,30 +69,54 @@ async function safeJson(res: Response): Promise<{ ok: boolean; data?: Record<str
   }
 }
 
+type DlgCfg = {
+  open: boolean;
+  title: string;
+  message: React.ReactNode;
+  confirmLabel: string;
+  confirmVariant: "danger" | "primary" | "success";
+  withInput: boolean;
+  inputPlaceholder: string;
+  onConfirm: (val?: string) => void;
+};
+const CLOSED: DlgCfg = {
+  open: false, title: "", message: "", confirmLabel: "Confirm",
+  confirmVariant: "primary", withInput: false, inputPlaceholder: "", onConfirm: () => {},
+};
+
 export default function GuildProfilePage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { user, character, setUser, setCharacter } = useGameStore();
 
-  const [guild, setGuild] = useState<GuildInfo | null>(null);
-  const [members, setMembers] = useState<GuildMember[]>([]);
-  const [isMember, setIsMember] = useState(false);
-  const [isLeader, setIsLeader] = useState(false);
-  const [viewerCharId, setViewerCharId] = useState("");
+  const [guild, setGuild]                     = useState<GuildInfo | null>(null);
+  const [members, setMembers]                 = useState<GuildMember[]>([]);
+  const [isMember, setIsMember]               = useState(false);
+  const [isLeader, setIsLeader]               = useState(false);
+  const [viewerCharId, setViewerCharId]       = useState("");
   const [viewerPositions, setViewerPositions] = useState<string[]>([]);
-  const [hasApplied, setHasApplied] = useState(false);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
-  const [leaving, setLeaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [actingApp, setActingApp] = useState<string | null>(null);
+  const [hasApplied, setHasApplied]           = useState(false);
+  const [applications, setApplications]       = useState<Application[]>([]);
+  const [loading, setLoading]                 = useState(true);
+  const [applying, setApplying]               = useState(false);
+  const [leaving, setLeaving]                 = useState(false);
+  const [deleting, setDeleting]               = useState(false);
+  const [actingApp, setActingApp]             = useState<string | null>(null);
   const [promotingMember, setPromotingMember] = useState<string | null>(null);
-  const [kickingMember, setKickingMember] = useState<string | null>(null);
-  const [savingPosition, setSavingPosition] = useState<string | null>(null);
-  // Draft selection per member — holds the unsaved rank picks while the picker is open
-  const [draft, setDraft] = useState<string[]>([]);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [kickingMember, setKickingMember]     = useState<string | null>(null);
+  const [savingPosition, setSavingPosition]   = useState<string | null>(null);
+  const [draft, setDraft]                     = useState<string[]>([]);
+  const [msg, setMsg]                         = useState<{ text: string; ok: boolean } | null>(null);
+
+  // Generic dialog
+  const [dlg, setDlg] = useState<DlgCfg>(CLOSED);
+  const closeDlg = () => setDlg(CLOSED);
+  function showDlg(cfg: Omit<DlgCfg, "open">) { setDlg({ open: true, ...cfg }); }
+
+  // Transfer leadership
+  const [transferPickerOpen, setTransferPickerOpen] = useState(false);
+  const [transferTarget, setTransferTarget]         = useState<GuildMember | null>(null);
+  const [transferring, setTransferring]             = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -134,37 +158,27 @@ export default function GuildProfilePage() {
     if (isLeader || viewerPositions.includes("queen")) fetchApplications();
   }, [isLeader, viewerPositions, fetchApplications]);
 
-  // ── Open promotion picker — seed draft from current saved positions ──────
   function openPromoter(memberId: string) {
-    if (promotingMember === memberId) {
-      setPromotingMember(null);
-      setDraft([]);
-      return;
-    }
+    if (promotingMember === memberId) { setPromotingMember(null); setDraft([]); return; }
     const member = members.find((m) => m._id === memberId);
     setPromotingMember(memberId);
     setDraft(member?.positions ?? []);
   }
 
-  // ── Toggle a rank in the local draft (no API call) ────────────────────────
   function toggleDraft(position: string) {
     setDraft((prev) => {
       if (prev.includes(position)) return prev.filter((p) => p !== position);
-      if (prev.length >= 3) return prev; // silently cap
+      if (prev.length >= 3) return prev;
       return [...prev, position];
     });
   }
 
-  // ── Validate: commit draft → optimistic UI update + API save ─────────────
   async function validatePositions(memberId: string) {
     const saved = members.find((m) => m._id === memberId)?.positions ?? [];
     const next = [...draft];
-
-    // Optimistic update
     setMembers((prev) => prev.map((m) => m._id === memberId ? { ...m, positions: next } : m));
     setPromotingMember(null);
     setDraft([]);
-
     setSavingPosition(memberId);
     const res = await fetch(`/api/guilds/${id}/position`, {
       method: "PATCH",
@@ -173,9 +187,7 @@ export default function GuildProfilePage() {
     });
     const { ok, error } = await safeJson(res);
     setSavingPosition(null);
-
     if (!ok) {
-      // Revert on failure
       setMembers((prev) => prev.map((m) => m._id === memberId ? { ...m, positions: saved } : m));
       setMsg({ text: error, ok: false });
     } else {
@@ -183,62 +195,110 @@ export default function GuildProfilePage() {
     }
   }
 
-  async function applyToGuild() {
-    const message = prompt("Optional application message (leave blank to skip):") ?? "";
-    setApplying(true);
-    const res = await fetch(`/api/guilds/${id}/apply`, {
+  function applyToGuild() {
+    showDlg({
+      title: "Apply to Guild",
+      message: "Add an optional message with your application.",
+      confirmLabel: "Send Application",
+      confirmVariant: "primary",
+      withInput: true,
+      inputPlaceholder: "Optional message...",
+      onConfirm: async (message = "") => {
+        closeDlg();
+        setApplying(true);
+        const res = await fetch(`/api/guilds/${id}/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        const { ok: resOk, data, error } = await safeJson(res);
+        setMsg({ text: resOk ? (data?.data as { message: string })?.message : error, ok: resOk });
+        if (resOk) fetchGuild();
+        setApplying(false);
+      },
+    });
+  }
+
+  function leaveGuild() {
+    showDlg({
+      title: "Leave Guild",
+      message: `Leave [${guild?.tag}] ${guild?.name}? You will need to re-apply to rejoin.`,
+      confirmLabel: "Leave",
+      confirmVariant: "danger",
+      withInput: false,
+      inputPlaceholder: "",
+      onConfirm: async () => {
+        closeDlg();
+        setLeaving(true);
+        const res = await fetch(`/api/guilds/${id}/leave`, { method: "POST" });
+        const { ok: resOk, data, error } = await safeJson(res);
+        setMsg({ text: resOk ? (data?.data as { message: string })?.message : error, ok: resOk });
+        if (resOk) {
+          fetchGuild();
+          setCharacter(character ? { ...character, guildIds: (character.guildIds as unknown as string[]).filter((g) => g !== id) as never } : character);
+        }
+        setLeaving(false);
+      },
+    });
+  }
+
+  function deleteGuild() {
+    showDlg({
+      title: "Disband Guild",
+      message: `Permanently disband [${guild?.tag}] ${guild?.name}? All members will be removed. This cannot be undone.`,
+      confirmLabel: "Disband",
+      confirmVariant: "danger",
+      withInput: false,
+      inputPlaceholder: "",
+      onConfirm: async () => {
+        closeDlg();
+        setDeleting(true);
+        const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
+        const { ok: resOk, error } = await safeJson(res);
+        if (resOk) router.push("/guilds");
+        else { setMsg({ text: error, ok: false }); setDeleting(false); }
+      },
+    });
+  }
+
+  function kickMember(memberId: string, name: string) {
+    showDlg({
+      title: "Kick Member",
+      message: `Remove ${name} from the guild?`,
+      confirmLabel: "Kick",
+      confirmVariant: "danger",
+      withInput: false,
+      inputPlaceholder: "",
+      onConfirm: async () => {
+        closeDlg();
+        setKickingMember(memberId);
+        setMembers((prev) => prev.filter((m) => m._id !== memberId));
+        setPromotingMember(null);
+        const res = await fetch(`/api/guilds/${id}/kick`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId }),
+        });
+        const { ok: resOk, error } = await safeJson(res);
+        if (!resOk) { setMsg({ text: error, ok: false }); fetchGuild(); }
+        else { setMsg({ text: `${name} has been kicked`, ok: true }); }
+        setKickingMember(null);
+      },
+    });
+  }
+
+  async function transferLeadership(target: GuildMember) {
+    setTransferTarget(null);
+    setTransferring(true);
+    const res = await fetch(`/api/guilds/${id}/transfer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ newLeaderId: target._id }),
     });
-    const { ok, data, error } = await safeJson(res);
-    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
-    if (ok) fetchGuild();
-    setApplying(false);
-  }
-
-  async function leaveGuild() {
-    if (!confirm("Are you sure you want to leave this guild?")) return;
-    setLeaving(true);
-    const res = await fetch(`/api/guilds/${id}/leave`, { method: "POST" });
-    const { ok, data, error } = await safeJson(res);
-    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
-    if (ok) {
-      fetchGuild();
-      setCharacter(character ? { ...character, guildIds: (character.guildIds as unknown as string[]).filter((g) => g !== id) as never } : character);
-    }
-    setLeaving(false);
-  }
-
-  async function deleteGuild() {
-    if (!confirm(`Disband [${guild?.tag}] ${guild?.name}? This cannot be undone.`)) return;
-    setDeleting(true);
-    const res = await fetch(`/api/guilds/${id}`, { method: "DELETE" });
-    const { ok, error } = await safeJson(res);
-    if (ok) router.push("/guilds");
-    else setMsg({ text: error, ok: false });
-    setDeleting(false);
-  }
-
-  async function kickMember(memberId: string, name: string) {
-    if (!confirm(`Kick ${name} from the guild?`)) return;
-    setKickingMember(memberId);
-    // Optimistic: remove from list
-    setMembers((prev) => prev.filter((m) => m._id !== memberId));
-    setPromotingMember(null);
-    const res = await fetch(`/api/guilds/${id}/kick`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId }),
-    });
-    const { ok, error } = await safeJson(res);
-    if (!ok) {
-      setMsg({ text: error, ok: false });
-      fetchGuild(); // revert
-    } else {
-      setMsg({ text: `${name} has been kicked`, ok: true });
-    }
-    setKickingMember(null);
+    const { ok: resOk, data, error } = await safeJson(res);
+    setMsg({ text: resOk ? (data?.data as { message: string })?.message : error, ok: resOk });
+    if (resOk) fetchGuild();
+    setTransferring(false);
   }
 
   async function handleApplication(characterId: string, action: "accept" | "reject") {
@@ -248,10 +308,10 @@ export default function GuildProfilePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ characterId, action }),
     });
-    const { ok, data, error } = await safeJson(res);
-    setMsg({ text: ok ? (data?.data as { message: string })?.message : error, ok });
+    const { ok: resOk, data, error } = await safeJson(res);
+    setMsg({ text: resOk ? (data?.data as { message: string })?.message : error, ok: resOk });
     setActingApp(null);
-    if (ok) { fetchGuild(); fetchApplications(); }
+    if (resOk) { fetchGuild(); fetchApplications(); }
   }
 
   if (loading) return <p className="text-xs font-mono text-gray-600 p-4">Loading guild...</p>;
@@ -266,6 +326,7 @@ export default function GuildProfilePage() {
   }
 
   const canManageApps = isLeader || viewerPositions.includes("queen");
+  const eligibleMembers = members.filter((m) => m._id !== viewerCharId);
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
@@ -314,6 +375,15 @@ export default function GuildProfilePage() {
             {isLeader && (
               <>
                 <span className="text-xs font-mono text-yellow-400 border border-yellow-900 px-3 py-1.5">♔ Guild Leader</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={transferring}
+                  disabled={eligibleMembers.length === 0}
+                  onClick={() => setTransferPickerOpen(true)}
+                >
+                  Transfer Leadership
+                </Button>
                 <Button size="sm" variant="danger" loading={deleting} onClick={deleteGuild}>Disband Guild</Button>
               </>
             )}
@@ -347,7 +417,7 @@ export default function GuildProfilePage() {
                       <span className="text-xs font-mono text-gray-600">Lv.{app.level}</span>
                       {app.shadowForm && <span className={`text-xs font-mono ${FORM_COLORS[app.shadowForm] ?? "text-gray-500"}`}>[{app.shadowForm}]</span>}
                     </div>
-                    {app.message && <p className="text-xs text-gray-500 mt-1 italic">"{app.message}"</p>}
+                    {app.message && <p className="text-xs text-gray-500 mt-1 italic">&ldquo;{app.message}&rdquo;</p>}
                     <p className="text-xs text-gray-700 mt-0.5">{new Date(app.appliedAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -370,9 +440,7 @@ export default function GuildProfilePage() {
 
             return (
               <div key={m._id} className="py-2.5 border-b border-gray-900 last:border-0">
-                {/* Member row */}
                 <div className="flex items-center gap-3">
-                  {/* Rank badges */}
                   <div className="flex gap-1 shrink-0 min-w-[2rem]">
                     {isLeaderRow ? (
                       <span className="text-yellow-400 font-mono" title="King">♔</span>
@@ -401,7 +469,6 @@ export default function GuildProfilePage() {
                           [{m.shadowForm}]
                         </span>
                       )}
-                      {/* Rank labels */}
                       {!isLeaderRow && m.positions.length > 0 && (
                         <span className="text-xs font-mono text-gray-600">
                           {m.positions.map((p) => RANK_META[p]?.label ?? p).join(" · ")}
@@ -413,7 +480,6 @@ export default function GuildProfilePage() {
                     </div>
                   </div>
 
-                  {/* Leader controls */}
                   {isLeader && !isLeaderRow && (
                     <div className="flex gap-2 shrink-0">
                       <button
@@ -433,7 +499,6 @@ export default function GuildProfilePage() {
                   )}
                 </div>
 
-                {/* Promotion picker — draft selection, validated on confirm */}
                 {isLeader && isPromoting && (
                   <div className="mt-3 ml-8 space-y-3 pb-1 border-l border-gray-800 pl-4">
                     <p className="text-xs font-mono text-gray-500">
@@ -479,20 +544,12 @@ export default function GuildProfilePage() {
                       );
                     })}
 
-                    {/* Action row */}
                     <div className="flex items-center gap-3 pt-1">
-                      <Button
-                        size="sm"
-                        loading={savingPosition === m._id}
-                        onClick={() => validatePositions(m._id)}
-                      >
+                      <Button size="sm" loading={savingPosition === m._id} onClick={() => validatePositions(m._id)}>
                         Validate
                       </Button>
                       {draft.length > 0 && (
-                        <button
-                          onClick={() => setDraft([])}
-                          className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors"
-                        >
+                        <button onClick={() => setDraft([])} className="text-xs font-mono text-gray-700 hover:text-gray-400 transition-colors">
                           ◌ Clear selection
                         </button>
                       )}
@@ -504,6 +561,88 @@ export default function GuildProfilePage() {
           })}
         </div>
       </Card>
+
+      {/* Transfer Leadership — member picker */}
+      {transferPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setTransferPickerOpen(false)} />
+          <div className="relative z-10 w-full max-w-sm bg-gray-950 border border-gray-700 shadow-2xl">
+            <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-mono font-bold text-gray-200 uppercase tracking-widest">Transfer Leadership</h2>
+                <p className="text-xs font-mono text-gray-600 mt-0.5">Select the new guild leader</p>
+              </div>
+              <button
+                onClick={() => setTransferPickerOpen(false)}
+                className="text-gray-600 hover:text-gray-300 font-mono text-lg leading-none transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            {eligibleMembers.length === 0 ? (
+              <p className="px-5 py-4 text-xs font-mono text-gray-600">No other members to transfer to.</p>
+            ) : (
+              <ul className="max-h-64 overflow-y-auto divide-y divide-gray-900">
+                {eligibleMembers.map((m) => (
+                  <li
+                    key={m._id}
+                    className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-900 transition-colors"
+                    onClick={() => { setTransferPickerOpen(false); setTransferTarget(m); }}
+                  >
+                    <div className="flex gap-1 shrink-0 min-w-[1.25rem]">
+                      {m.positions.length > 0 ? (
+                        m.positions.slice(0, 1).map((p) => (
+                          <span key={p} className={`font-mono ${RANK_META[p]?.color ?? "text-gray-400"}`}>{RANK_META[p]?.symbol}</span>
+                        ))
+                      ) : (
+                        <span className="text-gray-700 font-mono">◌</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-mono text-gray-200">{m.name}</span>
+                      <span className="ml-2 text-xs font-mono text-gray-600">Lv.{m.level}</span>
+                      {m.shadowForm && (
+                        <span className={`ml-2 text-xs font-mono ${FORM_COLORS[m.shadowForm] ?? "text-gray-500"}`}>[{m.shadowForm}]</span>
+                      )}
+                    </div>
+                    <span className="text-xs font-mono text-gray-700">→</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Generic confirm / prompt dialog */}
+      <Dialog
+        open={dlg.open}
+        title={dlg.title}
+        message={dlg.message}
+        confirmLabel={dlg.confirmLabel}
+        confirmVariant={dlg.confirmVariant}
+        withInput={dlg.withInput}
+        inputPlaceholder={dlg.inputPlaceholder}
+        onConfirm={dlg.onConfirm}
+        onCancel={closeDlg}
+      />
+
+      {/* Transfer leadership confirmation */}
+      <Dialog
+        open={!!transferTarget}
+        title="Confirm Transfer"
+        message={
+          <>
+            Transfer guild leadership to{" "}
+            <span className="text-yellow-400 font-semibold">{transferTarget?.name}</span>?{" "}
+            You will become a regular member. This cannot be undone.
+          </>
+        }
+        confirmLabel="Transfer"
+        confirmVariant="danger"
+        onConfirm={() => transferTarget && transferLeadership(transferTarget)}
+        onCancel={() => setTransferTarget(null)}
+      />
     </div>
   );
 }
